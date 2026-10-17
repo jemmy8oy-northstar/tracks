@@ -34,6 +34,9 @@ public static class ServiceRegistration
             sp.GetRequiredService<IConfiguration>().GetSection("Spotify").Get<SpotifySettings>() ?? new SpotifySettings());
         services.AddSingleton(TimeProvider.System);
         services.AddHttpClient();
+        services.AddScoped<IUserService, UserService>();
+        services.AddHttpClient<IStravaAuthService, StravaAuthService>();
+        services.AddHttpClient<ISpotifyAuthService, SpotifyAuthService>();
         services.AddSingleton<IStravaTokenProvider>(sp => new StravaTokenProvider(
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<IStravaSettings>(), sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<ISpotifyTokenProvider>(sp => new SpotifyTokenProvider(

@@ -18,6 +18,142 @@
         }
       }
     },
+    "/api/auth/strava": {
+      "get": {
+        "tags": [
+          "AuthRoutes"
+        ],
+        "operationId": "StartStravaSignIn",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/strava/callback": {
+      "get": {
+        "tags": [
+          "AuthRoutes"
+        ],
+        "operationId": "FinishStravaSignIn",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/spotify": {
+      "get": {
+        "tags": [
+          "AuthRoutes"
+        ],
+        "operationId": "StartSpotifyConnect",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "AuthRoutes"
+        ],
+        "operationId": "DisconnectSpotify",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/auth/spotify/callback": {
+      "get": {
+        "tags": [
+          "AuthRoutes"
+        ],
+        "operationId": "FinishSpotifyConnect",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": [
+          "AuthRoutes"
+        ],
+        "operationId": "GetMe",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/strava/webhook": {
       "get": {
         "tags": [
@@ -111,6 +247,26 @@
   },
   "components": {
     "schemas": {
+      "MeResponse": {
+        "required": [
+          "athleteId",
+          "spotifyConnected"
+        ],
+        "type": "object",
+        "properties": {
+          "athleteId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "spotifyConnected": {
+            "type": "boolean"
+          }
+        }
+      },
       "RunResponse": {
         "required": [
           "activityId",
@@ -233,6 +389,9 @@
   "tags": [
     {
       "name": "Balenthiran.Tracks.WebApi"
+    },
+    {
+      "name": "AuthRoutes"
     },
     {
       "name": "StravaRoutes"

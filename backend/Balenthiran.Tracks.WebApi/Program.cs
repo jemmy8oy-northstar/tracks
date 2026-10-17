@@ -3,12 +3,32 @@ using Balenthiran.Tracks.WebApi;
 using Balenthiran.Tracks.WebApi.ExceptionHandling;
 using Balenthiran.Tracks.WebApi.Routes;
 using Balenthiran.Tracks.Database;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddBackendServices(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
+
+// A session is an HTTP-only, Secure cookie. SameSite=Lax (not Strict) is required: the OAuth
+// redirect back from Strava/Spotify is a cross-site navigation, and Strict would hide the
+// cookie from it. Lax still keeps it off cross-site POSTs. An API answers 401/403 rather than
+// redirecting to a login page it does not have.
+builder.Services
+    .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(o =>
+    {
+        o.Cookie.Name = "tracks.session";
+        o.Cookie.HttpOnly = true;
+        o.Cookie.SameSite = SameSiteMode.Lax;
+        o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        o.ExpireTimeSpan = TimeSpan.FromDays(30);
+        o.SlidingExpiration = true;
+        o.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
+        o.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
+    });
+builder.Services.AddAuthorization();
 
 // Global exception handling: AppExceptionHandler maps thrown AppExceptions to RFC 7807
 // ProblemDetails; AddProblemDetails supplies the writer + standard fields.
@@ -38,8 +58,10 @@ if (!generatingOpenApiDocument)
     var dbContext = scope.ServiceProvider.GetService<AppDbContext>();
     if (dbContext is null)
         app.Logger.LogWarning("Skipping database migration — no connection string configured.");
-    else
+    else if (dbContext.Database.IsRelational())
         dbContext.Database.Migrate();
+    else
+        dbContext.Database.EnsureCreated(); // the in-memory provider in tests has no migrations
 }
 
 // The ingress routes /tracks/api here without stripping the prefix, so the app has
@@ -49,9 +71,12 @@ if (!string.IsNullOrWhiteSpace(pathBase))
     app.UsePathBase(pathBase);
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapGroup("/api")
     .MapStatusRoutes()
+    .MapAuthRoutes()
     .MapStravaRoutes()
     .MapRunsRoutes()
     .WithOpenApi();
