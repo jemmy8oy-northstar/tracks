@@ -1,6 +1,11 @@
 import React from 'react';
 
-const Hero: React.FC = () => {
+interface HeroProps {
+    /** Replaces the default call to action. */
+    children?: React.ReactNode;
+}
+
+const Hero: React.FC<HeroProps> = ({ children }) => {
     return (
         <section className="container" style={{
             textAlign: 'center',
@@ -25,23 +30,7 @@ const Hero: React.FC = () => {
             }}>
                 Track your tracks' tracks. The songs you listened to, pinned along the route you ran.
             </p>
-            <div className="hero-actions" style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
-                <a
-                    href="#status"
-                    className="glass"
-                    style={{
-                        padding: '16px 32px',
-                        background: 'var(--accent-primary)',
-                        color: '#fff',
-                        fontWeight: 600,
-                        borderRadius: '50px',
-                        border: 'none',
-                        textDecoration: 'none'
-                    }}
-                >
-                    Get Started
-                </a>
-            </div>
+            {children}
         </section>
     );
 };
