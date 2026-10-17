@@ -10,9 +10,9 @@ namespace Balenthiran.Tracks.Services;
 
 public class StravaClient(HttpClient http, IStravaTokenProvider tokens) : IStravaClient
 {
-    public async Task<IStravaActivity> GetActivityAsync(long activityId, CancellationToken cancellationToken = default)
+    public async Task<IStravaActivity> GetActivityAsync(Guid userId, long activityId, CancellationToken cancellationToken = default)
     {
-        var token = await tokens.GetAccessTokenAsync(cancellationToken);
+        var token = await tokens.GetAccessTokenAsync(userId, cancellationToken);
         using var request = new HttpRequestMessage(HttpMethod.Get, $"https://www.strava.com/api/v3/activities/{activityId}")
         {
             Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) },

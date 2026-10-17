@@ -32,9 +32,9 @@ public static class StravaRoutes
     }
 
     // Acknowledge at once: Strava wants a reply within 2 seconds, so the real work happens on the queue.
-    private static Ok ReceiveEvent(IStravaWebhookService webhook, StravaWebhookEvent webhookEvent)
+    private static async Task<Ok> ReceiveEvent(IStravaWebhookService webhook, StravaWebhookEvent webhookEvent, CancellationToken cancellationToken)
     {
-        webhook.Accept(webhookEvent);
+        await webhook.AcceptAsync(webhookEvent, cancellationToken);
         return TypedResults.Ok();
     }
 }

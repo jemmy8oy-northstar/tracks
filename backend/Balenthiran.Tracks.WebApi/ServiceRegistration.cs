@@ -25,8 +25,8 @@ public static class ServiceRegistration
         services.AddAutoMapper(cfg => cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
         services.AddScoped<IStatusService, StatusService>();
 
-        // Strava -> Spotify run sync. Everything here is a singleton: the queue, store and token
-        // caches must outlive a request, and the worker runs outside any.
+        // Strava -> Spotify run sync. The queue, token caches and clients are singletons (they must
+        // outlive a request, and the worker runs outside any); what touches the database is scoped.
         // Settings are read when first resolved (not here) so test and host overrides are seen.
         services.AddSingleton<IStravaSettings>(sp =>
             sp.GetRequiredService<IConfiguration>().GetSection("Strava").Get<StravaSettings>() ?? new StravaSettings());
@@ -38,18 +38,20 @@ public static class ServiceRegistration
         services.AddHttpClient<IStravaAuthService, StravaAuthService>();
         services.AddHttpClient<ISpotifyAuthService, SpotifyAuthService>();
         services.AddSingleton<IStravaTokenProvider>(sp => new StravaTokenProvider(
-            sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<IStravaSettings>(), sp.GetRequiredService<TimeProvider>()));
+            sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<IServiceScopeFactory>(),
+            sp.GetRequiredService<IStravaSettings>(), sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<ISpotifyTokenProvider>(sp => new SpotifyTokenProvider(
-            sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<ISpotifySettings>(), sp.GetRequiredService<TimeProvider>()));
+            sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<IServiceScopeFactory>(),
+            sp.GetRequiredService<ISpotifySettings>(), sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<IStravaClient>(sp => new StravaClient(
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<IStravaTokenProvider>()));
         services.AddSingleton<ISpotifyClient>(sp => new SpotifyClient(
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<ISpotifyTokenProvider>()));
         services.AddSingleton<IRunSongMatcher, RunSongMatcher>();
-        services.AddSingleton<IRunStore, RunStore>();
+        services.AddScoped<IRunStore, RunStore>();
         services.AddSingleton<IRunSyncQueue, RunSyncQueue>();
-        services.AddSingleton<IRunSyncProcessor, RunSyncProcessor>();
-        services.AddSingleton<IStravaWebhookService, StravaWebhookService>();
+        services.AddScoped<IRunSyncProcessor, RunSyncProcessor>();
+        services.AddScoped<IStravaWebhookService, StravaWebhookService>();
         services.AddHostedService<RunSyncWorker>();
     }
 }

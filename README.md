@@ -6,6 +6,19 @@ The songs you listened to, pinned along the route you ran. A Strava workout plus
 
 The spec lives in Kit (`music-miles.beh` in jemmy8oy-northstar/kit). This repo is named `music-miles` until it's renamed.
 
+## Accounts and configuration
+
+Anyone signs in with Strava (the Strava athlete is the account) and then connects their own Spotify. Users, their refresh tokens and their runs live in Postgres (`ConnectionStrings:DefaultConnection`). There is no per-person configuration: only the two apps' credentials.
+
+| Setting | What |
+|---|---|
+| `Strava:ClientId`, `Strava:ClientSecret` | The Strava API application. Its callback domain must match the host. |
+| `Strava:VerifyToken` | Any secret string; the webhook subscription handshake must send it back. |
+| `Spotify:ClientId`, `Spotify:ClientSecret` | The Spotify app. Register `<PublicBaseUrl>/api/auth/spotify/callback` as a redirect URI. |
+| `PublicBaseUrl` | The app's public root, e.g. `https://balenthiran.co.uk/tracks`. OAuth redirect URIs are `<PublicBaseUrl>/api/auth/{strava,spotify}/callback`. Unset locally, where they are built from the request (scheme, host and `PathBase`). |
+
+Runs sync through Strava's webhook: a new activity from a signed-up athlete is queued, the user's recently-played Spotify history is read, and the run is stored against them. If an athlete revokes the app on Strava, their user and runs are deleted.
+
 > Scaffolded from web-template (`dotnet new web-template -n Balenthiran.Tracks --appName tracks`). CI, image build and helm chart arrive in a separate platform PR. The rest of this file is the template's README.
 
 # Personal Web Template

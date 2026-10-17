@@ -4,6 +4,6 @@ namespace Balenthiran.Tracks.Abstractions.Services;
 
 public interface IStravaClient
 {
-    /// <summary>Fetches one activity (GET /api/v3/activities/{id}).</summary>
-    Task<IStravaActivity> GetActivityAsync(long activityId, CancellationToken cancellationToken = default);
+    /// <summary>Fetches one of the user's activities (GET /api/v3/activities/{id}).</summary>
+    Task<IStravaActivity> GetActivityAsync(Guid userId, long activityId, CancellationToken cancellationToken = default);
 }

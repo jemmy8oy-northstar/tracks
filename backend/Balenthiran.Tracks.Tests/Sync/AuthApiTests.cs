@@ -12,12 +12,6 @@ public class AuthApiTests
 {
     private const long Athlete = 777;
 
-    private static async Task<T> WithDb<T>(SyncApiFactory factory, Func<AppDbContext, Task<T>> read)
-    {
-        using var scope = factory.Services.CreateScope();
-        return await read(scope.ServiceProvider.GetRequiredService<AppDbContext>());
-    }
-
     private sealed record Me(long AthleteId, bool SpotifyConnected);
 
     [Fact]
@@ -80,7 +74,7 @@ public class AuthApiTests
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Empty(factory.Http.Requests);
-        Assert.Equal(0, await WithDb(factory, db => db.Users.CountAsync()));
+        Assert.Equal(0, await factory.WithDb(db => db.Users.CountAsync()));
         Assert.Equal(HttpStatusCode.Unauthorized, (await browser.GetAsync("/api/me")).StatusCode);
     }
 
@@ -114,7 +108,7 @@ public class AuthApiTests
         var response = await SignIn.WithStravaAsync(factory, factory.Browser(), Athlete, scope: "read");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal(0, await WithDb(factory, db => db.Users.CountAsync()));
+        Assert.Equal(0, await factory.WithDb(db => db.Users.CountAsync()));
     }
 
     [Fact]
@@ -136,7 +130,7 @@ public class AuthApiTests
         Assert.Contains("code=the-code", exchange);
         Assert.Contains("client_secret=strava-secret", exchange);
         Assert.Contains("grant_type=authorization_code", exchange);
-        var user = await WithDb(factory, db => db.Users.SingleAsync());
+        var user = await factory.WithDb(db => db.Users.SingleAsync());
         Assert.Equal(Athlete, user.StravaAthleteId);
         Assert.Equal("refresh-0", user.StravaRefreshToken);
         Assert.Null(user.SpotifyRefreshToken);
@@ -153,7 +147,7 @@ public class AuthApiTests
         await SignIn.WithStravaAsync(factory, factory.Browser(), Athlete, refreshToken: "old");
         await SignIn.WithStravaAsync(factory, factory.Browser(), Athlete, refreshToken: "new");
 
-        var user = await WithDb(factory, db => db.Users.SingleAsync());
+        var user = await factory.WithDb(db => db.Users.SingleAsync());
         Assert.Equal("new", user.StravaRefreshToken);
     }
 
@@ -197,7 +191,7 @@ public class AuthApiTests
         using var factory = new SyncApiFactory();
         var browser = factory.Browser();
         await SignIn.WithStravaAsync(factory, browser, Athlete);
-        await WithDb(factory, async db =>
+        await factory.WithDb(async db =>
         {
             db.Users.RemoveRange(db.Users);
             return await db.SaveChangesAsync();
@@ -243,7 +237,7 @@ public class AuthApiTests
         var body = factory.Http.RequestBodies.Last();
         Assert.Contains("code=sp-code", body);
         Assert.Contains("redirect_uri=https%3A%2F%2Flocalhost%2Fapi%2Fauth%2Fspotify%2Fcallback", body);
-        Assert.Equal("spotify-refresh", (await WithDb(factory, db => db.Users.SingleAsync())).SpotifyRefreshToken);
+        Assert.Equal("spotify-refresh", (await factory.WithDb(db => db.Users.SingleAsync())).SpotifyRefreshToken);
         Assert.Equal(new Me(Athlete, true), await browser.GetFromJsonAsync<Me>("/api/me", new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)));
     }
 
@@ -258,7 +252,7 @@ public class AuthApiTests
         var response = await browser.GetAsync("/api/auth/spotify/callback?code=c&state=forged");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Null((await WithDb(factory, db => db.Users.SingleAsync())).SpotifyRefreshToken);
+        Assert.Null((await factory.WithDb(db => db.Users.SingleAsync())).SpotifyRefreshToken);
     }
 
     [Fact]
@@ -273,6 +267,6 @@ public class AuthApiTests
 
         Assert.Equal(HttpStatusCode.NoContent, (await browser.DeleteAsync("/api/auth/spotify")).StatusCode);
 
-        Assert.Null((await WithDb(factory, db => db.Users.SingleAsync())).SpotifyRefreshToken);
+        Assert.Null((await factory.WithDb(db => db.Users.SingleAsync())).SpotifyRefreshToken);
     }
 }

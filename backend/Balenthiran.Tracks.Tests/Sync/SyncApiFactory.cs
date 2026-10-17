@@ -18,7 +18,6 @@ namespace Balenthiran.Tracks.Tests.Sync;
 /// </summary>
 public sealed class SyncApiFactory(IReadOnlyDictionary<string, string>? settings = null) : WebApplicationFactory<Program>
 {
-    public const long AthleteId = 4242;
     public const string VerifyToken = "verify-me";
 
     private readonly string store = Guid.NewGuid().ToString();
@@ -37,13 +36,20 @@ public sealed class SyncApiFactory(IReadOnlyDictionary<string, string>? settings
         {
             services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase(store));
             services.RemoveAll<IStravaSettings>();
-            services.AddSingleton<IStravaSettings>(new StravaSettings { ClientId = "strava-id", ClientSecret = "strava-secret", VerifyToken = VerifyToken, AthleteId = AthleteId });
+            services.AddSingleton<IStravaSettings>(new StravaSettings { ClientId = "strava-id", ClientSecret = "strava-secret", VerifyToken = VerifyToken });
             services.RemoveAll<ISpotifySettings>();
             services.AddSingleton<ISpotifySettings>(new SpotifySettings { ClientId = "spotify-id", ClientSecret = "spotify-secret" });
             services.RemoveAll<IRunSyncProcessor>();
             services.AddSingleton<IRunSyncProcessor>(Processor);
             services.ConfigureAll<HttpClientFactoryOptions>(o => o.HttpMessageHandlerBuilderActions.Add(b => b.PrimaryHandler = Http));
         });
+    }
+
+    /// <summary>Runs <paramref name="act"/> against the factory's database in its own scope.</summary>
+    public async Task<T> WithDb<T>(Func<AppDbContext, Task<T>> act)
+    {
+        using var scope = Services.CreateScope();
+        return await act(scope.ServiceProvider.GetRequiredService<AppDbContext>());
     }
 
     /// <summary>A client that keeps cookies and follows no redirects: one browser.</summary>

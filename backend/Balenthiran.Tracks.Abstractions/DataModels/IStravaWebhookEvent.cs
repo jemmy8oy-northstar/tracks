@@ -7,4 +7,7 @@ public interface IStravaWebhookEvent
     long ObjectId { get; }
     string? AspectType { get; }
     long OwnerId { get; }
+
+    /// <summary>What changed, e.g. <c>authorized: "false"</c> when an athlete revokes access. Values are JSON as received.</summary>
+    IReadOnlyDictionary<string, object?>? Updates { get; }
 }

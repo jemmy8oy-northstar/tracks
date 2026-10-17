@@ -85,23 +85,21 @@ public static class AuthRoutes
         if (error is not null || string.IsNullOrEmpty(code))
             throw new ValidationException("Spotify did not grant access.");
 
-        await spotify.ConnectAsync(UserId(principal), code, CallbackUrl(http, config, "spotify"), cancellationToken);
+        await spotify.ConnectAsync(principal.UserId(), code, CallbackUrl(http, config, "spotify"), cancellationToken);
         return TypedResults.Redirect(BaseUrl(http, config) + "/");
     }
 
     private static async Task<NoContent> DisconnectSpotify(ClaimsPrincipal principal, ISpotifyAuthService spotify, CancellationToken cancellationToken)
     {
-        await spotify.DisconnectAsync(UserId(principal), cancellationToken);
+        await spotify.DisconnectAsync(principal.UserId(), cancellationToken);
         return TypedResults.NoContent();
     }
 
     private static async Task<Ok<MeResponse>> GetMe(ClaimsPrincipal principal, IUserService users, CancellationToken cancellationToken)
     {
-        var user = await users.GetSignedInAsync(UserId(principal), cancellationToken);
+        var user = await users.GetSignedInAsync(principal.UserId(), cancellationToken);
         return TypedResults.Ok(new MeResponse(user.StravaAthleteId, user.SpotifyConnected));
     }
-
-    private static Guid UserId(ClaimsPrincipal principal) => Guid.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     // The app's public root, which the OAuth providers send people back to. A configured PublicBaseUrl
     // wins (behind a TLS-terminating ingress the request alone says http, and Spotify needs an exact

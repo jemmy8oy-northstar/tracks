@@ -3,15 +3,19 @@ using System.Text;
 using System.Text.Json;
 using Balenthiran.Tracks.Abstractions.DataModels;
 using Balenthiran.Tracks.Abstractions.Services;
+using Balenthiran.Tracks.EntityModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Balenthiran.Tracks.Services;
 
-public class SpotifyTokenProvider(HttpClient http, ISpotifySettings settings, TimeProvider time)
-    : RefreshTokenProvider(http, time), ISpotifyTokenProvider
+public class SpotifyTokenProvider(HttpClient http, IServiceScopeFactory scopes, ISpotifySettings settings, TimeProvider time)
+    : RefreshTokenProvider(http, scopes, time), ISpotifyTokenProvider
 {
     protected override string ServiceName => "Spotify";
 
-    protected override string ConfiguredRefreshToken => settings.RefreshToken ?? string.Empty;
+    protected override string? GetRefreshToken(UserEntity user) => user.SpotifyRefreshToken;
+
+    protected override void SetRefreshToken(UserEntity user, string refreshToken) => user.SpotifyRefreshToken = refreshToken;
 
     protected override HttpRequestMessage BuildRequest(string refreshToken)
     {
