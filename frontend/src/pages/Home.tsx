@@ -43,7 +43,7 @@ const Home = () => {
                     <ol style={{ paddingLeft: '20px', marginTop: '8px' }}>
                       {run.songs.map((song) => (
                         <li key={`${song.playedAt}-${song.name}`}>
-                          {song.name} <span style={{ color: 'var(--text-secondary)' }}>{song.artists.join(', ')}</span>
+                          {song.name} <span style={{ color: 'var(--text-secondary)' }}>· {song.artists.join(', ')}</span>
                         </li>
                       ))}
                     </ol>

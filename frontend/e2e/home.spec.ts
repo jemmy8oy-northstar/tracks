@@ -79,6 +79,9 @@ test('BEH-SYNC-4: home page lists each run with its songs, and says when a run h
   await expect(runs.getByRole('heading', { name: 'Quiet Run' })).toBeVisible();
   await expect(runs.getByText('1:02:05')).toBeVisible();
   await expect(runs.getByText('No songs found for this run.')).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await runs.screenshot({ path: 'e2e/screenshots/runs-phone.png', animations: 'disabled' });
 });
 
 test('BEH-SYNC-4: home page explains an empty run list', async ({ page }) => {
