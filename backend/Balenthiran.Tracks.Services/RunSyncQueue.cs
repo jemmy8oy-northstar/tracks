@@ -5,11 +5,12 @@ namespace Balenthiran.Tracks.Services;
 
 public class RunSyncQueue : IRunSyncQueue
 {
-    private readonly Channel<long> channel = Channel.CreateUnbounded<long>(new UnboundedChannelOptions { SingleReader = true });
+    private readonly Channel<(long AthleteId, long ActivityId)> channel =
+        Channel.CreateUnbounded<(long AthleteId, long ActivityId)>(new UnboundedChannelOptions { SingleReader = true });
     private readonly HashSet<long> seen = [];
     private readonly Lock gate = new();
 
-    public bool TryEnqueue(long activityId)
+    public bool TryEnqueue(long athleteId, long activityId)
     {
         lock (gate)
         {
@@ -17,7 +18,7 @@ public class RunSyncQueue : IRunSyncQueue
                 return false;
         }
 
-        return channel.Writer.TryWrite(activityId);
+        return channel.Writer.TryWrite((athleteId, activityId));
     }
 
     public void Release(long activityId)
@@ -26,6 +27,6 @@ public class RunSyncQueue : IRunSyncQueue
             seen.Remove(activityId);
     }
 
-    public IAsyncEnumerable<long> ReadAllAsync(CancellationToken cancellationToken) =>
+    public IAsyncEnumerable<(long AthleteId, long ActivityId)> ReadAllAsync(CancellationToken cancellationToken) =>
         channel.Reader.ReadAllAsync(cancellationToken);
 }

@@ -9,9 +9,9 @@ namespace Balenthiran.Tracks.Services;
 
 public class SpotifyClient(HttpClient http, ISpotifyTokenProvider tokens) : ISpotifyClient
 {
-    public async Task<IReadOnlyList<ISpotifyPlay>> GetRecentlyPlayedAsync(DateTimeOffset after, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ISpotifyPlay>> GetRecentlyPlayedAsync(Guid userId, DateTimeOffset after, CancellationToken cancellationToken = default)
     {
-        var token = await tokens.GetAccessTokenAsync(cancellationToken);
+        var token = await tokens.GetAccessTokenAsync(userId, cancellationToken);
         var url = $"https://api.spotify.com/v1/me/player/recently-played?limit=50&after={after.ToUnixTimeMilliseconds()}";
         using var request = new HttpRequestMessage(HttpMethod.Get, url)
         {

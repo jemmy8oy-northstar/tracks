@@ -6,6 +6,8 @@ namespace Balenthiran.Tracks.Tests.Sync;
 
 public class ClientTests
 {
+    private static readonly Guid User = Guid.NewGuid();
+
     private const string ActivityJson =
         """{"id":55,"name":"Morning Run","sport_type":"TrailRun","start_date":"2026-10-17T09:00:00Z","elapsed_time":1800}""";
 
@@ -23,10 +25,12 @@ public class ClientTests
     public async Task Strava_client_reads_the_activity_with_a_bearer_token()
     {
         var handler = new FakeHttpMessageHandler().Reply(ActivityJson);
-        var client = new StravaClient(new HttpClient(handler), new StubTokenProvider());
+        var tokens = new StubTokenProvider();
+        var client = new StravaClient(new HttpClient(handler), tokens);
 
-        var activity = await client.GetActivityAsync(55);
+        var activity = await client.GetActivityAsync(User, 55);
 
+        Assert.Equal([User], tokens.Users);
         Assert.Equal("Morning Run", activity.Name);
         Assert.Equal("TrailRun", activity.SportType);
         Assert.Equal(new DateTimeOffset(2026, 10, 17, 9, 0, 0, TimeSpan.Zero), activity.StartDate);
@@ -44,7 +48,7 @@ public class ClientTests
             """{"name":"Old","type":"Run","start_date":"2026-10-17T09:00:00Z","elapsed_time":60}""");
         var client = new StravaClient(new HttpClient(handler), new StubTokenProvider());
 
-        Assert.Equal("Run", (await client.GetActivityAsync(1)).SportType);
+        Assert.Equal("Run", (await client.GetActivityAsync(User, 1)).SportType);
     }
 
     [Fact]
@@ -53,19 +57,21 @@ public class ClientTests
         var handler = new FakeHttpMessageHandler().Reply("{}", HttpStatusCode.NotFound).Reply("{}", HttpStatusCode.InternalServerError);
         var client = new StravaClient(new HttpClient(handler), new StubTokenProvider());
 
-        await Assert.ThrowsAsync<NotFoundException>(() => client.GetActivityAsync(1));
-        await Assert.ThrowsAsync<UpstreamServiceException>(() => client.GetActivityAsync(1));
+        await Assert.ThrowsAsync<NotFoundException>(() => client.GetActivityAsync(User, 1));
+        await Assert.ThrowsAsync<UpstreamServiceException>(() => client.GetActivityAsync(User, 1));
     }
 
     [Fact]
     public async Task Spotify_client_reads_plays_asking_for_the_most_recent_fifty_after_the_run_start()
     {
         var handler = new FakeHttpMessageHandler().Reply(PlaysJson);
-        var client = new SpotifyClient(new HttpClient(handler), new StubTokenProvider());
+        var tokens = new StubTokenProvider();
+        var client = new SpotifyClient(new HttpClient(handler), tokens);
         var after = new DateTimeOffset(2026, 10, 17, 9, 0, 0, TimeSpan.Zero);
 
-        var plays = await client.GetRecentlyPlayedAsync(after);
+        var plays = await client.GetRecentlyPlayedAsync(User, after);
 
+        Assert.Equal([User], tokens.Users);
         Assert.Equal(2, plays.Count);
         Assert.Equal("Song One", plays[0].TrackName);
         Assert.Equal(["A", "B"], plays[0].Artists);
@@ -86,6 +92,6 @@ public class ClientTests
         var handler = new FakeHttpMessageHandler().Reply("{}", HttpStatusCode.Unauthorized);
         var client = new SpotifyClient(new HttpClient(handler), new StubTokenProvider());
 
-        await Assert.ThrowsAsync<UpstreamServiceException>(() => client.GetRecentlyPlayedAsync(DateTimeOffset.UtcNow));
+        await Assert.ThrowsAsync<UpstreamServiceException>(() => client.GetRecentlyPlayedAsync(User, DateTimeOffset.UtcNow));
     }
 }

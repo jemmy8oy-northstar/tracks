@@ -8,28 +8,30 @@ namespace Balenthiran.Tracks.Tests.Sync;
 
 public class RunSyncProcessorTests
 {
+    private const long Athlete = 4242;
+
     private static readonly DateTimeOffset Start = new(2026, 10, 17, 9, 0, 0, TimeSpan.Zero);
 
     private sealed class FakeStrava(StravaActivity activity) : IStravaClient
     {
-        public int Calls { get; private set; }
+        public List<Guid> Users { get; } = [];
 
-        public Task<IStravaActivity> GetActivityAsync(long activityId, CancellationToken cancellationToken = default)
+        public Task<IStravaActivity> GetActivityAsync(Guid userId, long activityId, CancellationToken cancellationToken = default)
         {
-            Calls++;
+            Users.Add(userId);
             return Task.FromResult<IStravaActivity>(activity);
         }
     }
 
     private sealed class FakeSpotify(params SpotifyPlay[] plays) : ISpotifyClient
     {
-        public int Calls { get; private set; }
+        public List<Guid> Users { get; } = [];
 
         public DateTimeOffset? After { get; private set; }
 
-        public Task<IReadOnlyList<ISpotifyPlay>> GetRecentlyPlayedAsync(DateTimeOffset after, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<ISpotifyPlay>> GetRecentlyPlayedAsync(Guid userId, DateTimeOffset after, CancellationToken cancellationToken = default)
         {
-            Calls++;
+            Users.Add(userId);
             After = after;
             return Task.FromResult<IReadOnlyList<ISpotifyPlay>>(plays);
         }
@@ -45,39 +47,47 @@ public class RunSyncProcessorTests
         TrackName = name, Artists = ["A"], DurationMs = 240000, PlayedAt = Start.AddMinutes(endsAfterMinutes),
     };
 
-    private static StravaSettings ConfiguredStrava => new() { ClientId = "i", ClientSecret = "s", RefreshToken = "r" };
+    private static StravaSettings ConfiguredStrava => new() { ClientId = "i", ClientSecret = "s" };
 
-    private static SpotifySettings ConfiguredSpotify => new() { ClientId = "i", ClientSecret = "s", RefreshToken = "r" };
+    private static SpotifySettings ConfiguredSpotify => new() { ClientId = "i", ClientSecret = "s" };
 
     private static RunSyncProcessor Build(
-        FakeStrava strava, FakeSpotify spotify, RunStore store, StravaSettings? stravaSettings = null, SpotifySettings? spotifySettings = null) =>
-        new(stravaSettings ?? ConfiguredStrava, spotifySettings ?? ConfiguredSpotify, strava, spotify, new RunSongMatcher(), store,
-            NullLogger<RunSyncProcessor>.Instance);
+        TestDb db, FakeStrava strava, FakeSpotify spotify, StravaSettings? stravaSettings = null, SpotifySettings? spotifySettings = null) =>
+        new(stravaSettings ?? ConfiguredStrava, spotifySettings ?? ConfiguredSpotify, new UserService(db.Context()), strava, spotify,
+            new RunSongMatcher(), new RunStore(db.Context()), NullLogger<RunSyncProcessor>.Instance);
+
+    private static async Task<IReadOnlyList<IRun>> RunsOf(TestDb db, Guid userId) => await new RunStore(db.Context()).GetAllAsync(userId);
 
     [Fact]
-    public async Task A_run_is_stored_with_the_songs_that_overlapped_it_and_Spotify_is_asked_from_its_start()
+    public async Task A_run_is_stored_for_the_athletes_user_with_the_songs_that_overlapped_it()
     {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
+        var other = await db.AddUserAsync(1);
         var strava = new FakeStrava(Activity());
         var spotify = new FakeSpotify(Play("late", 20), Play("early", 8), Play("way after", 90));
-        var store = new RunStore();
 
-        await Build(strava, spotify, store).ProcessAsync(55);
+        await Build(db, strava, spotify).ProcessAsync(Athlete, 55);
 
-        var run = Assert.Single(store.GetAll());
+        var run = Assert.Single(await RunsOf(db, user.Id));
         Assert.Equal("Morning Run", run.Name);
         Assert.Equal(1800, run.ElapsedSeconds);
         Assert.Equal(["early", "late"], run.Songs.Select(s => s.Name));
         Assert.Equal(Start, spotify.After);
+        Assert.Equal([user.Id], strava.Users);
+        Assert.Equal([user.Id], spotify.Users);
+        Assert.Empty(await RunsOf(db, other.Id));
     }
 
     [Fact]
     public async Task A_run_with_no_songs_is_still_stored()
     {
-        var store = new RunStore();
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
 
-        await Build(new FakeStrava(Activity()), new FakeSpotify(), store).ProcessAsync(55);
+        await Build(db, new FakeStrava(Activity()), new FakeSpotify()).ProcessAsync(Athlete, 55);
 
-        Assert.Empty(Assert.Single(store.GetAll()).Songs);
+        Assert.Empty(Assert.Single(await RunsOf(db, user.Id)).Songs);
     }
 
     [Theory]
@@ -85,13 +95,14 @@ public class RunSyncProcessorTests
     [InlineData("Swim")]
     public async Task A_non_run_is_ignored_without_asking_Spotify(string sport)
     {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
         var spotify = new FakeSpotify();
-        var store = new RunStore();
 
-        await Build(new FakeStrava(Activity(sport)), spotify, store).ProcessAsync(55);
+        await Build(db, new FakeStrava(Activity(sport)), spotify).ProcessAsync(Athlete, 55);
 
-        Assert.Empty(store.GetAll());
-        Assert.Equal(0, spotify.Calls);
+        Assert.Empty(await RunsOf(db, user.Id));
+        Assert.Empty(spotify.Users);
     }
 
     [Theory]
@@ -101,38 +112,69 @@ public class RunSyncProcessorTests
     [InlineData("trailrun")]
     public async Task The_default_run_sport_types_count(string sport)
     {
-        var store = new RunStore();
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
 
-        await Build(new FakeStrava(Activity(sport)), new FakeSpotify(), store).ProcessAsync(55);
+        await Build(db, new FakeStrava(Activity(sport)), new FakeSpotify()).ProcessAsync(Athlete, 55);
 
-        Assert.Single(store.GetAll());
+        Assert.Single(await RunsOf(db, user.Id));
     }
 
     [Fact]
     public async Task Configured_sport_types_replace_the_defaults()
     {
-        var store = new RunStore();
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
         var settings = ConfiguredStrava;
         settings.SportTypes = ["Walk"];
 
-        await Build(new FakeStrava(Activity("Run")), new FakeSpotify(), store, settings).ProcessAsync(55);
-        await Build(new FakeStrava(Activity("Walk")), new FakeSpotify(), store, settings).ProcessAsync(55);
+        await Build(db, new FakeStrava(Activity("Run")), new FakeSpotify(), settings).ProcessAsync(Athlete, 55);
+        await Build(db, new FakeStrava(Activity("Walk")), new FakeSpotify(), settings).ProcessAsync(Athlete, 55);
 
-        Assert.Equal("Walk", Assert.Single(store.GetAll()).SportType);
+        Assert.Equal("Walk", Assert.Single(await RunsOf(db, user.Id)).SportType);
     }
 
     [Fact]
-    public async Task Missing_credentials_skip_processing_without_calling_either_API()
+    public async Task Missing_app_credentials_skip_processing_without_calling_either_API()
     {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
         var strava = new FakeStrava(Activity());
         var spotify = new FakeSpotify();
-        var store = new RunStore();
 
-        await Build(strava, spotify, store, new StravaSettings()).ProcessAsync(55);
-        await Build(strava, spotify, store, spotifySettings: new SpotifySettings()).ProcessAsync(55);
+        await Build(db, strava, spotify, new StravaSettings()).ProcessAsync(Athlete, 55);
+        await Build(db, strava, spotify, spotifySettings: new SpotifySettings()).ProcessAsync(Athlete, 55);
 
-        Assert.Equal(0, strava.Calls);
-        Assert.Equal(0, spotify.Calls);
-        Assert.Empty(store.GetAll());
+        Assert.Empty(strava.Users);
+        Assert.Empty(spotify.Users);
+        Assert.Empty(await RunsOf(db, user.Id));
+    }
+
+    [Fact]
+    public async Task An_athlete_who_is_not_a_user_is_skipped_without_calling_either_API()
+    {
+        using var db = new TestDb();
+        var strava = new FakeStrava(Activity());
+        var spotify = new FakeSpotify();
+
+        await Build(db, strava, spotify).ProcessAsync(Athlete, 55);
+
+        Assert.Empty(strava.Users);
+        Assert.Empty(spotify.Users);
+    }
+
+    [Fact]
+    public async Task A_user_without_Spotify_connected_is_skipped_without_calling_either_API()
+    {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete, spotifyRefresh: null);
+        var strava = new FakeStrava(Activity());
+        var spotify = new FakeSpotify();
+
+        await Build(db, strava, spotify).ProcessAsync(Athlete, 55);
+
+        Assert.Empty(strava.Users);
+        Assert.Empty(spotify.Users);
+        Assert.Empty(await RunsOf(db, user.Id));
     }
 }

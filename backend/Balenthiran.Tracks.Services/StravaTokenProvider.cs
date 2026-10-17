@@ -1,15 +1,19 @@
 using System.Text.Json;
 using Balenthiran.Tracks.Abstractions.DataModels;
 using Balenthiran.Tracks.Abstractions.Services;
+using Balenthiran.Tracks.EntityModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Balenthiran.Tracks.Services;
 
-public class StravaTokenProvider(HttpClient http, IStravaSettings settings, TimeProvider time)
-    : RefreshTokenProvider(http, time), IStravaTokenProvider
+public class StravaTokenProvider(HttpClient http, IServiceScopeFactory scopes, IStravaSettings settings, TimeProvider time)
+    : RefreshTokenProvider(http, scopes, time), IStravaTokenProvider
 {
     protected override string ServiceName => "Strava";
 
-    protected override string ConfiguredRefreshToken => settings.RefreshToken ?? string.Empty;
+    protected override string? GetRefreshToken(UserEntity user) => user.StravaRefreshToken;
+
+    protected override void SetRefreshToken(UserEntity user, string refreshToken) => user.StravaRefreshToken = refreshToken;
 
     protected override HttpRequestMessage BuildRequest(string refreshToken) =>
         new(HttpMethod.Post, "https://www.strava.com/oauth/token")

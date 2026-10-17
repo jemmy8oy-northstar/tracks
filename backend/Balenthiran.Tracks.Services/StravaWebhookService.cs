@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Balenthiran.Tracks.Services;
 
-public class StravaWebhookService(IStravaSettings settings, IRunSyncQueue queue, ILogger<StravaWebhookService> logger)
+public class StravaWebhookService(IStravaSettings settings, IRunSyncQueue queue, IUserService users, ILogger<StravaWebhookService> logger)
     : IStravaWebhookService
 {
     public bool IsValidSubscription(string? mode, string? verifyToken)
@@ -20,21 +20,34 @@ public class StravaWebhookService(IStravaSettings settings, IRunSyncQueue queue,
             Encoding.UTF8.GetBytes(verifyToken));
     }
 
-    public void Accept(IStravaWebhookEvent webhookEvent)
+    public async Task AcceptAsync(IStravaWebhookEvent webhookEvent, CancellationToken cancellationToken = default)
     {
-        if (webhookEvent.ObjectType != "activity" || webhookEvent.AspectType != "create")
-            return;
-
-        if (settings.AthleteId is null)
+        if (IsDeauthorisation(webhookEvent))
         {
-            logger.LogWarning("Ignoring Strava event for activity {ActivityId}: no athlete id is configured.", webhookEvent.ObjectId);
+            // The athlete revoked us on Strava: the privacy-respecting thing is to forget them entirely.
+            await users.DeleteByAthleteAsync(webhookEvent.OwnerId, cancellationToken);
+            logger.LogInformation("Deleted the user whose Strava athlete {AthleteId} revoked access.", webhookEvent.OwnerId);
             return;
         }
 
-        if (webhookEvent.OwnerId != settings.AthleteId)
+        if (webhookEvent.ObjectType != "activity" || webhookEvent.AspectType != "create")
             return;
 
-        if (!queue.TryEnqueue(webhookEvent.ObjectId))
+        // Strava tells us about every athlete who authorised the app, including ones we have since deleted.
+        if (await users.FindByAthleteAsync(webhookEvent.OwnerId, cancellationToken) is null)
+        {
+            logger.LogInformation("Ignoring Strava event for activity {ActivityId}: its athlete is not a user.", webhookEvent.ObjectId);
+            return;
+        }
+
+        if (!queue.TryEnqueue(webhookEvent.OwnerId, webhookEvent.ObjectId))
             logger.LogInformation("Strava activity {ActivityId} was already received.", webhookEvent.ObjectId);
     }
+
+    private static bool IsDeauthorisation(IStravaWebhookEvent e) =>
+        e.ObjectType == "athlete"
+        && e.AspectType == "update"
+        && e.Updates is not null
+        && e.Updates.TryGetValue("authorized", out var authorized)
+        && string.Equals(authorized?.ToString(), "false", StringComparison.OrdinalIgnoreCase);
 }

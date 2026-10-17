@@ -4,13 +4,13 @@ namespace Balenthiran.Tracks.Tests.Sync;
 
 public class RunSyncQueueTests
 {
-    private static async Task<List<long>> Drain(RunSyncQueue queue, int count)
+    private static async Task<List<(long AthleteId, long ActivityId)>> Drain(RunSyncQueue queue, int count)
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        var read = new List<long>();
-        await foreach (var id in queue.ReadAllAsync(cts.Token))
+        var read = new List<(long AthleteId, long ActivityId)>();
+        await foreach (var item in queue.ReadAllAsync(cts.Token))
         {
-            read.Add(id);
+            read.Add(item);
             if (read.Count == count)
                 break;
         }
@@ -19,26 +19,26 @@ public class RunSyncQueueTests
     }
 
     [Fact]
-    public async Task An_activity_queued_twice_is_delivered_once()
+    public async Task An_activity_queued_twice_is_delivered_once_with_its_athlete()
     {
         var queue = new RunSyncQueue();
 
-        Assert.True(queue.TryEnqueue(7));
-        Assert.False(queue.TryEnqueue(7));
-        Assert.True(queue.TryEnqueue(8));
+        Assert.True(queue.TryEnqueue(1, 7));
+        Assert.False(queue.TryEnqueue(1, 7));
+        Assert.True(queue.TryEnqueue(2, 8));
 
-        Assert.Equal([7L, 8L], await Drain(queue, 2));
+        Assert.Equal([(1L, 7L), (2L, 8L)], await Drain(queue, 2));
     }
 
     [Fact]
     public async Task A_released_activity_can_be_queued_again()
     {
         var queue = new RunSyncQueue();
-        queue.TryEnqueue(7);
+        queue.TryEnqueue(1, 7);
         await Drain(queue, 1);
 
         queue.Release(7);
 
-        Assert.True(queue.TryEnqueue(7));
+        Assert.True(queue.TryEnqueue(1, 7));
     }
 }

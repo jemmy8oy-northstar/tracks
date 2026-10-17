@@ -4,9 +4,9 @@ namespace Balenthiran.Tracks.Abstractions.Services;
 
 public interface IRunStore
 {
-    /// <summary>Keeps the run. Returns false (and keeps the original) if the activity is already stored.</summary>
-    bool Save(IRun run);
+    /// <summary>Keeps the run for the user. Returns false (and keeps the original) if they already have that activity.</summary>
+    Task<bool> SaveAsync(Guid userId, IRun run, CancellationToken cancellationToken = default);
 
-    /// <summary>All runs, newest first.</summary>
-    IReadOnlyList<IRun> GetAll();
+    /// <summary>That user's runs, newest first, each with its songs in play order.</summary>
+    Task<IReadOnlyList<IRun>> GetAllAsync(Guid userId, CancellationToken cancellationToken = default);
 }

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Balenthiran.Tracks.Abstractions.Services;
 using Balenthiran.Tracks.DataModels.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -10,14 +11,15 @@ public static class RunsRoutes
     {
         var group = parentGroup.MapGroup("/runs");
 
-        group.MapGet("", GetRuns).WithName("GetRuns");
+        group.MapGet("", GetRuns).RequireAuthorization().WithName("GetRuns");
 
         return parentGroup;
     }
 
-    private static Ok<List<RunResponse>> GetRuns(IRunStore store)
+    // Only ever the signed-in user's own runs: the id comes from the session, never from the request.
+    private static async Task<Ok<List<RunResponse>>> GetRuns(ClaimsPrincipal principal, IRunStore store, CancellationToken cancellationToken)
     {
-        var runs = store.GetAll().Select(run => new RunResponse(
+        var runs = (await store.GetAllAsync(principal.UserId(), cancellationToken)).Select(run => new RunResponse(
             run.ActivityId,
             run.Name,
             run.SportType,

@@ -16,4 +16,9 @@ public class StravaWebhookEvent : IStravaWebhookEvent
 
     [JsonPropertyName("owner_id")]
     public long OwnerId { get; set; }
+
+    [JsonPropertyName("updates")]
+    public Dictionary<string, object?>? Updates { get; set; }
+
+    IReadOnlyDictionary<string, object?>? IStravaWebhookEvent.Updates => Updates;
 }

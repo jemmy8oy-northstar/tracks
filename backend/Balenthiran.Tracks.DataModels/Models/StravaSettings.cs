@@ -8,9 +8,7 @@ public class StravaSettings : IStravaSettings
 
     public string? ClientId { get; set; }
     public string? ClientSecret { get; set; }
-    public string? RefreshToken { get; set; }
     public string? VerifyToken { get; set; }
-    public long? AthleteId { get; set; }
 
     // Bound from config as an array; kept apart from RunSportTypes so configuring it replaces
     // the defaults rather than being appended to them.
@@ -20,7 +18,5 @@ public class StravaSettings : IStravaSettings
         SportTypes is { Length: > 0 } ? SportTypes : DefaultRunSportTypes;
 
     public bool IsConfigured =>
-        !string.IsNullOrWhiteSpace(ClientId)
-        && !string.IsNullOrWhiteSpace(ClientSecret)
-        && !string.IsNullOrWhiteSpace(RefreshToken);
+        !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(ClientSecret);
 }
