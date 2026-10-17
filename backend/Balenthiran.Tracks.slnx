@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="Balenthiran.Tracks.Abstractions/Balenthiran.Tracks.Abstractions.csproj" />
+  <Project Path="Balenthiran.Tracks.WebApi/Balenthiran.Tracks.WebApi.csproj" />
+  <Project Path="Balenthiran.Tracks.DataModels/Balenthiran.Tracks.DataModels.csproj" />
+  <Project Path="Balenthiran.Tracks.Database/Balenthiran.Tracks.Database.csproj" />
+  <Project Path="Balenthiran.Tracks.DomainModels/Balenthiran.Tracks.DomainModels.csproj" />
+  <Project Path="Balenthiran.Tracks.EntityModels/Balenthiran.Tracks.EntityModels.csproj" />
+  <Project Path="Balenthiran.Tracks.Services/Balenthiran.Tracks.Services.csproj" />
+  <Project Path="Balenthiran.Tracks.SourceGenerators/Balenthiran.Tracks.SourceGenerators.csproj" />
+  <Project Path="Balenthiran.Tracks.Tests/Balenthiran.Tracks.Tests.csproj" />
+</Solution>

@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="../Balenthiran.Tracks.DataModels/Balenthiran.Tracks.DataModels.csproj" />
+    <ProjectReference Include="../Balenthiran.Tracks.Abstractions/Balenthiran.Tracks.Abstractions.csproj" />
+    <!-- Analyzer, not a runtime dependency: supplies [GenerateInterface].
+         Inert until a class here is marked with it. -->
+    <ProjectReference Include="../Balenthiran.Tracks.SourceGenerators/Balenthiran.Tracks.SourceGenerators.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <EnableDefaultResourceItems>false</EnableDefaultResourceItems>    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
