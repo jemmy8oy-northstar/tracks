@@ -14,12 +14,14 @@ test.beforeEach(async ({ page }) => {
   await mockApi(page);
 });
 
-test('home page renders hero and the mocked API status', async ({ page }) => {
+test('BEH-BRAND-1: home page renders the Tracks hero and the mocked API status', async ({ page }) => {
   await page.goto('./');
 
+  await expect(page).toHaveTitle('Tracks');
   await expect(
-    page.getByRole('heading', { name: 'Your App Name', level: 1 }),
+    page.getByRole('heading', { name: 'Tracks', level: 1 }),
   ).toBeVisible();
+  await expect(page.getByText("Track your tracks' tracks.", { exact: false })).toBeVisible();
 
   // Proves the mocked GET /api/status rendered into the status panel.
   await expect(page.getByText('Healthy', { exact: false })).toBeVisible();
@@ -36,7 +38,7 @@ test('home page renders hero and the mocked API status', async ({ page }) => {
 test('home page renders in dark mode', async ({ page }) => {
   await page.goto('./');
   await expect(
-    page.getByRole('heading', { name: 'Your App Name', level: 1 }),
+    page.getByRole('heading', { name: 'Tracks', level: 1 }),
   ).toBeVisible();
 
   await page.getByRole('button', { name: 'Toggle Theme' }).click();

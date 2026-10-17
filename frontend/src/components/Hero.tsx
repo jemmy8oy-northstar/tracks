@@ -14,7 +14,7 @@ const Hero: React.FC = () => {
                 WebkitTextFillColor: 'transparent',
                 lineHeight: 1.1
             }}>
-                Your App Name
+                Tracks
             </h1>
             <p style={{
                 fontSize: 'clamp(1.1rem, 2vw, 1.4rem)',
@@ -23,7 +23,7 @@ const Hero: React.FC = () => {
                 margin: '0 auto 48px',
                 fontWeight: 400
             }}>
-                A brief description of what your app does.
+                Track your tracks' tracks. The songs you listened to, pinned along the route you ran.
             </p>
             <div className="hero-actions" style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
                 <a

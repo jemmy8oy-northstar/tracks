@@ -27,7 +27,7 @@ function App() {
             color: 'var(--text-secondary)',
             fontSize: '0.9rem'
           }}>
-            <p>© {new Date().getFullYear()} Your Name Here.</p>
+            <p>© {new Date().getFullYear()} Tracks.</p>
           </footer>
         </div>
       </Router>
