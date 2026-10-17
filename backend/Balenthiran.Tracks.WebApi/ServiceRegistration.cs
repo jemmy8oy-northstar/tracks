@@ -22,5 +22,9 @@ public static class ServiceRegistration
 
         services.AddAutoMapper(cfg => cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
         services.AddScoped<IStatusService, StatusService>();
+        services.AddSingleton<IDistanceCalculator, HaversineDistanceCalculator>();
+        services.AddSingleton<IWorkoutSource, DemoWorkoutSource>();
+        services.AddScoped<ISongMatcher, SongMatcher>();
+        services.AddScoped<IMusicMapService, MusicMapService>();
     }
 }
