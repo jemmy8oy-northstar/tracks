@@ -17,11 +17,228 @@
           }
         }
       }
+    },
+    "/api/strava/webhook": {
+      "get": {
+        "tags": [
+          "StravaRoutes"
+        ],
+        "operationId": "VerifyStravaWebhook",
+        "parameters": [
+          {
+            "name": "hub.mode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hub.verify_token",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hub.challenge",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "StravaRoutes"
+        ],
+        "operationId": "ReceiveStravaWebhookEvent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StravaWebhookEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/runs": {
+      "get": {
+        "tags": [
+          "RunsRoutes"
+        ],
+        "operationId": "GetRuns",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RunResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RunResponse": {
+        "required": [
+          "activityId",
+          "name",
+          "sportType",
+          "startedAt",
+          "elapsedSeconds",
+          "songs"
+        ],
+        "type": "object",
+        "properties": {
+          "activityId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sportType": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "elapsedSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "songs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunSongResponse"
+            }
+          }
+        }
+      },
+      "RunSongResponse": {
+        "required": [
+          "name",
+          "artists",
+          "albumArtUrl",
+          "playedAt",
+          "offsetSeconds"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "artists": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "albumArtUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "playedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "offsetSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "StravaWebhookEvent": {
+        "type": "object",
+        "properties": {
+          "object_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "object_id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "aspect_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "owner_id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      }
     }
   },
   "tags": [
     {
       "name": "Balenthiran.Tracks.WebApi"
+    },
+    {
+      "name": "StravaRoutes"
+    },
+    {
+      "name": "RunsRoutes"
     }
   ]
 }

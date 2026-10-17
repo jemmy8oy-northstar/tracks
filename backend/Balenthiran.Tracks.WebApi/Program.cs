@@ -52,6 +52,8 @@ app.UseHttpsRedirection();
 
 app.MapGroup("/api")
     .MapStatusRoutes()
+    .MapStravaRoutes()
+    .MapRunsRoutes()
     .WithOpenApi();
 
 app.Run();

@@ -4,6 +4,12 @@
     <ProjectReference Include="../Balenthiran.Tracks.DomainModels/Balenthiran.Tracks.DomainModels.csproj" />
     <ProjectReference Include="../Balenthiran.Tracks.Abstractions/Balenthiran.Tracks.Abstractions.csproj" />
     <ProjectReference Include="../Balenthiran.Tracks.Database/Balenthiran.Tracks.Database.csproj" />
+    <ProjectReference Include="../Balenthiran.Tracks.DataModels/Balenthiran.Tracks.DataModels.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- IHttpClientFactory, BackgroundService and logging, without pinning separate packages. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
