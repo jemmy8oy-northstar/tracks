@@ -3,6 +3,8 @@ import './App.css'
 import Navbar from './components/Navbar'
 import Home from './pages/Home'
 import DesignSystem from './pages/DesignSystem'
+import Workouts from './pages/Workouts'
+import Workout from './pages/Workout'
 import ScrollToTop from './components/ScrollToTop'
 import { ThemeProvider } from './context/ThemeContext'
 
@@ -16,6 +18,8 @@ function App() {
           <main>
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/workouts" element={<Workouts />} />
+              <Route path="/workouts/:id" element={<Workout />} />
               <Route path="/design" element={<DesignSystem />} />
             </Routes>
           </main>

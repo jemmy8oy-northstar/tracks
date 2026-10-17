@@ -52,6 +52,7 @@ app.UseHttpsRedirection();
 
 app.MapGroup("/api")
     .MapStatusRoutes()
+    .MapWorkoutRoutes()
     .WithOpenApi();
 
 app.Run();
