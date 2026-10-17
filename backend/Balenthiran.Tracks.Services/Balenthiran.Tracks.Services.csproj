@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="../Balenthiran.Tracks.DomainModels/Balenthiran.Tracks.DomainModels.csproj" />
+    <ProjectReference Include="../Balenthiran.Tracks.Abstractions/Balenthiran.Tracks.Abstractions.csproj" />
+    <ProjectReference Include="../Balenthiran.Tracks.Database/Balenthiran.Tracks.Database.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="16.1.1" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <EnableDefaultResourceItems>false</EnableDefaultResourceItems>    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
