@@ -11,6 +11,8 @@ export async function mockApi(page: Page): Promise<void> {
   await page.route('**/api/status', (route) =>
     route.fulfill({ json: { status: 'Healthy', service: 'Balenthiran.Tracks.WebApi' } }),
   );
+  // Default to no runs; specs that need runs register their own route after this.
+  await page.route('**/api/runs', (route) => route.fulfill({ json: [] }));
   // Interest / newsletter forms — accept any submission so the UI shows success.
   await page.route('**/api/interest/**', (route) =>
     route.fulfill({ status: 200, json: { ok: true } }),
