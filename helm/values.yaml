@@ -37,6 +37,41 @@ apps:
       # The ingress routes /tracks/api here without stripping the prefix.
       - name: PathBase
         value: "/tracks"     # developer replaces 'tracks' at scaffold time
+      # TLS ends at the ingress, so the request scheme is http. The OAuth redirect URIs
+      # are built from this instead, and must match what Strava and Spotify have registered.
+      - name: PublicBaseUrl
+        value: "https://balenthiran.co.uk/tracks"
+      # Created by secret-provisioner from oke-fleet secrets/tracks.json.
+      - name: ConnectionStrings__DefaultConnection
+        valueFrom:
+          secretKeyRef:
+            name: tracks-secrets
+            key: ConnectionStrings__DefaultConnection
+      - name: Strava__ClientId
+        valueFrom:
+          secretKeyRef:
+            name: tracks-secrets
+            key: Strava__ClientId
+      - name: Strava__ClientSecret
+        valueFrom:
+          secretKeyRef:
+            name: tracks-secrets
+            key: Strava__ClientSecret
+      - name: Strava__VerifyToken
+        valueFrom:
+          secretKeyRef:
+            name: tracks-secrets
+            key: Strava__VerifyToken
+      - name: Spotify__ClientId
+        valueFrom:
+          secretKeyRef:
+            name: tracks-secrets
+            key: Spotify__ClientId
+      - name: Spotify__ClientSecret
+        valueFrom:
+          secretKeyRef:
+            name: tracks-secrets
+            key: Spotify__ClientSecret
 
   - name: frontend
     image:
@@ -55,11 +90,3 @@ apps:
     nodeSelector: {}
     tolerations: []
     affinity: {}
-
-# App-specific secrets — add per project (none pre-scaffolded):
-# env:
-#   - name: MY_API_KEY
-#     valueFrom:
-#       secretKeyRef:
-#         name: {{ .Values.fullnameOverride }}-secrets
-#         key: MY_API_KEY
