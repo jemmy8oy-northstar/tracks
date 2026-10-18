@@ -24,6 +24,9 @@ const injectedRtkApi = api.injectEndpoints({
         },
       }),
     }),
+    signOut: build.mutation<SignOutApiResponse, SignOutApiArg>({
+      query: () => ({ url: `/api/auth/signout`, method: "POST" }),
+    }),
     startSpotifyConnect: build.query<
       StartSpotifyConnectApiResponse,
       StartSpotifyConnectApiArg
@@ -93,6 +96,8 @@ export type FinishStravaSignInApiArg = {
   scope?: string;
   error?: string;
 };
+export type SignOutApiResponse = unknown;
+export type SignOutApiArg = void;
 export type StartSpotifyConnectApiResponse = unknown;
 export type StartSpotifyConnectApiArg = void;
 export type DisconnectSpotifyApiResponse = unknown;
@@ -149,6 +154,7 @@ export const {
   useGetStatusQuery,
   useStartStravaSignInQuery,
   useFinishStravaSignInQuery,
+  useSignOutMutation,
   useStartSpotifyConnectQuery,
   useDisconnectSpotifyMutation,
   useFinishSpotifyConnectQuery,

@@ -74,6 +74,19 @@
         }
       }
     },
+    "/api/auth/signout": {
+      "post": {
+        "tags": [
+          "AuthRoutes"
+        ],
+        "operationId": "SignOut",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/auth/spotify": {
       "get": {
         "tags": [

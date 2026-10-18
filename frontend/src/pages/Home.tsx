@@ -1,8 +1,7 @@
 import Hero from '../components/Hero';
 import { Button } from '../components/ui';
 import { apiHref } from '../api/emptyApi';
-import { useGetMeQuery, useGetRunsQuery, useDisconnectSpotifyMutation } from '../api/generatedApi';
-import { useSignOutMutation } from '../api/authApi';
+import { useGetMeQuery, useGetRunsQuery, useDisconnectSpotifyMutation, useSignOutMutation } from '../api/generatedApi';
 
 // The API sends int64 values as number | string, so coerce before formatting.
 const formatDuration = (seconds: number | string) => {
