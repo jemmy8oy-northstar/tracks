@@ -10,13 +10,15 @@ public static class StatusRoutes
     {
         var group = parentGroup.MapGroup("/status");
 
-        group.MapGet("", async (IStatusService statusService) =>
+        group.MapGet("", async (IStatusService statusService, IStravaSubscriptionService stravaSubscription) =>
         {
             var status = await statusService.GetSystemStatusAsync();
             return Results.Ok(new {
                 version = status.Version,
                 friendlyStatus = status.GetFriendlyStatus(),
-                timestamp = status.LastUpdated
+                timestamp = status.LastUpdated,
+                // Public so a live check can tell whether Strava will send runs at all; it names no secret.
+                stravaWebhook = stravaSubscription.State
             });
         })
         .WithName("GetStatus");
