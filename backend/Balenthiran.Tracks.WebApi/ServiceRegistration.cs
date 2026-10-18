@@ -53,5 +53,11 @@ public static class ServiceRegistration
         services.AddScoped<IRunSyncProcessor, RunSyncProcessor>();
         services.AddScoped<IStravaWebhookService, StravaWebhookService>();
         services.AddHostedService<RunSyncWorker>();
+        services.AddSingleton<IStravaSubscriptionService>(sp => new StravaSubscriptionService(
+            sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<IStravaSettings>(),
+            sp.GetRequiredService<IConfiguration>()["PublicBaseUrl"], sp.GetRequiredService<ILogger<StravaSubscriptionService>>()));
+        services.AddHostedService(sp => new StravaSubscriptionWorker(
+            sp.GetRequiredService<IStravaSubscriptionService>(), sp.GetRequiredService<IHostApplicationLifetime>(),
+            sp.GetRequiredService<ILogger<StravaSubscriptionWorker>>(), StravaSubscriptionWorker.DefaultRetryDelays));
     }
 }

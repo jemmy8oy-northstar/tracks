@@ -39,6 +39,9 @@ public sealed class SyncApiFactory(IReadOnlyDictionary<string, string>? settings
             services.AddSingleton<IStravaSettings>(new StravaSettings { ClientId = "strava-id", ClientSecret = "strava-secret", VerifyToken = VerifyToken });
             services.RemoveAll<ISpotifySettings>();
             services.AddSingleton<ISpotifySettings>(new SpotifySettings { ClientId = "spotify-id", ClientSecret = "spotify-secret" });
+            // The real one would take the canned replies meant for the test.
+            services.RemoveAll<IStravaSubscriptionService>();
+            services.AddSingleton<IStravaSubscriptionService>(new StubSubscriptionService());
             services.RemoveAll<IRunSyncProcessor>();
             services.AddSingleton<IRunSyncProcessor>(Processor);
             services.ConfigureAll<HttpClientFactoryOptions>(o => o.HttpMessageHandlerBuilderActions.Add(b => b.PrimaryHandler = Http));
