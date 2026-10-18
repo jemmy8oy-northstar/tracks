@@ -27,7 +27,9 @@ public static class AuthRoutes
 
         auth.MapGet("/strava", StartStravaSignIn).WithName("StartStravaSignIn");
         auth.MapGet("/strava/callback", FinishStravaSignIn).WithName("FinishStravaSignIn");
-        auth.MapPost("/signout", SignOutUser).WithName("SignOut");
+        // The cast matters: a lone-HttpContext handler otherwise binds to the RequestDelegate
+        // overload, which carries no endpoint metadata, so the route drops out of openapi.json.
+        auth.MapPost("/signout", (Delegate)SignOutUser).WithName("SignOut");
 
         auth.MapGet("/spotify", StartSpotifyConnect).RequireAuthorization().WithName("StartSpotifyConnect");
         auth.MapGet("/spotify/callback", FinishSpotifyConnect).RequireAuthorization().WithName("FinishSpotifyConnect");
