@@ -1,6 +1,5 @@
 # Set this to your app name at scaffold time (e.g. "macro-metrics")
 fullnameOverride: "tracks"
-
 ingress:
   enabled: true
   className: nginx
@@ -11,15 +10,13 @@ ingress:
   tls:
     - hosts:
         - balenthiran.co.uk
-      secretName: balenthiran-tls   # shared wildcard cert — no per-project TLS setup
-
-registryPrefix: "lhr.ocir.io/lr7uc6l49odc"  # shared OCIR namespace
-
+      secretName: balenthiran-tls # shared wildcard cert — no per-project TLS setup
+registryPrefix: "lhr.ocir.io/lr7uc6l49odc" # shared OCIR namespace
 apps:
   - name: backend
     image:
-      repository: lhr.ocir.io/lr7uc6l49odc/tracks-backend   # Update at scaffold time
-      tag: latest
+      repository: lhr.ocir.io/lr7uc6l49odc/tracks-backend # Update at scaffold time
+      tag: 0.1.7
       pullPolicy: Always
     containerPort: 8080
     replicas: 1
@@ -27,7 +24,7 @@ apps:
       port: 80
       targetPort: 8080
     ingress:
-      path: /tracks/api     # developer replaces 'tracks' at scaffold time
+      path: /tracks/api # developer replaces 'tracks' at scaffold time
       pathType: Prefix
     resources: {}
     nodeSelector: {}
@@ -36,7 +33,7 @@ apps:
     env:
       # The ingress routes /tracks/api here without stripping the prefix.
       - name: PathBase
-        value: "/tracks"     # developer replaces 'tracks' at scaffold time
+        value: "/tracks" # developer replaces 'tracks' at scaffold time
       # TLS ends at the ingress, so the request scheme is http. The OAuth redirect URIs
       # are built from this instead, and must match what Strava and Spotify have registered.
       - name: PublicBaseUrl
@@ -72,11 +69,10 @@ apps:
           secretKeyRef:
             name: tracks-secrets
             key: Spotify__ClientSecret
-
   - name: frontend
     image:
-      repository: lhr.ocir.io/lr7uc6l49odc/tracks-frontend   # Update at scaffold time
-      tag: latest
+      repository: lhr.ocir.io/lr7uc6l49odc/tracks-frontend # Update at scaffold time
+      tag: 0.1.7
       pullPolicy: Always
     containerPort: 80
     replicas: 1
@@ -84,7 +80,7 @@ apps:
       port: 80
       targetPort: 80
     ingress:
-      path: /tracks         # developer replaces 'tracks' at scaffold time
+      path: /tracks # developer replaces 'tracks' at scaffold time
       pathType: Prefix
     resources: {}
     nodeSelector: {}
