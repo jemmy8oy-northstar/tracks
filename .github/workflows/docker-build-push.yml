@@ -35,7 +35,8 @@ name: Build and Push Docker Images to OCIR
 on:
   push:
     branches:
-      - main
+      # tracks has no main: dev is its default branch, and Argo deploys dev's HEAD.
+      - dev
   workflow_dispatch:
 
 env:
