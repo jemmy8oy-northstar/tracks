@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom';
 import Hero from '../components/Hero';
 import { Button } from '../components/ui';
 import { apiHref } from '../api/emptyApi';
@@ -87,6 +88,8 @@ const Account = ({ spotifyConnected, onChanged }: { spotifyConnected: boolean; o
 
 const Home = () => {
   const { data, isLoading, error, refetch } = useGetMeQuery();
+  // The Strava callback sends a runner here with ?error=full when Strava's athlete cap is hit.
+  const full = useSearchParams()[0].get('error') === 'full';
   // RTK Query keeps the last good data after a failed refetch; a 401 after sign-out must win.
   const me = error ? undefined : data;
   const signedOut = error !== undefined && 'status' in error && error.status === 401;
@@ -114,6 +117,11 @@ const Home = () => {
     <Hero>
       {signedOut && (
         <div>
+          {full && (
+            <p role="alert" style={{ ...note, color: '#f87171', marginBottom: '16px' }}>
+              Tracks is full for now. Please try again later.
+            </p>
+          )}
           <a className={linkButton} href={apiHref('api/auth/strava')}>
             <span className="ui-button__label">Sign in with Strava</span>
           </a>

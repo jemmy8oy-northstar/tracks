@@ -33,6 +33,19 @@ test('BEH-AUTH-1: signed out shows a Strava sign-in link and never asks for runs
   await page.screenshot({ path: 'e2e/screenshots/signed-out-phone.png', fullPage: true, animations: 'disabled' });
 });
 
+test('BEH-CONNECT-4: arriving with ?error=full tells a signed-out runner Tracks is full, not an error', async ({ page }) => {
+  await mockApi(page, null);
+  await page.goto('./?error=full');
+
+  await expect(page.getByRole('alert')).toContainText('Tracks is full for now');
+  await expect(page.getByText('Could not reach the API')).toHaveCount(0);
+
+  // Control: the normal signed-out page carries no such message.
+  await page.goto('./');
+  await expect(page.getByRole('link', { name: 'Sign in with Strava' })).toBeVisible();
+  await expect(page.getByText('Tracks is full for now')).toHaveCount(0);
+});
+
 test('BEH-AUTH-2: signed in without Spotify offers Connect Spotify and still lists runs', async ({ page }) => {
   await mockApi(page, { athleteId: 1, spotifyConnected: false });
   await page.route('**/api/runs', (route) => route.fulfill({ json: runs }));

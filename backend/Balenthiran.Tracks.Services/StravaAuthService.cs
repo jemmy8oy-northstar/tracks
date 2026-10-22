@@ -57,6 +57,10 @@ public class StravaAuthService(HttpClient http, AppDbContext db, IUserService us
         {
             if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized)
                 throw new UnauthorizedException("Strava did not accept that sign-in. Try again.");
+            // Strava's own cap on connected athletes (we keep no count of our own): a 403 naming it.
+            if (response.StatusCode is HttpStatusCode.Forbidden
+                && (await response.Content.ReadAsStringAsync(cancellationToken)).Contains("Limit of connected athletes exceeded", StringComparison.OrdinalIgnoreCase))
+                throw new StravaFullException("Strava has reached its limit of connected athletes.");
             if (!response.IsSuccessStatusCode)
                 throw new UpstreamServiceException($"Strava token exchange failed with status {(int)response.StatusCode}.");
 
