@@ -1,10 +1,14 @@
 using Balenthiran.Tracks.EntityModels;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Balenthiran.Tracks.Database;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options), IDataProtectionKeyContext
 {
+    // Data Protection keys (cookie signing/encryption) live here so a redeploy doesn't sign everyone out.
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
     public DbSet<UserEntity> Users => Set<UserEntity>();
 
     public DbSet<RunEntity> Runs => Set<RunEntity>();
