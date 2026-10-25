@@ -3,6 +3,7 @@ using Balenthiran.Tracks.Abstractions.Services;
 using Balenthiran.Tracks.DataModels.Models;
 using Balenthiran.Tracks.Services;
 using Balenthiran.Tracks.Database;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 
 namespace Balenthiran.Tracks.WebApi;
@@ -20,6 +21,12 @@ public static class ServiceRegistration
         {
             services.AddDbContext<AppDbContext>(options =>
                 options.UseNpgsql(connectionString, b => b.MigrationsAssembly("Balenthiran.Tracks.Database")));
+
+            // Persist keys so auth cookies survive redeploys. Only with a database: without one the
+            // context isn't registered and the default (ephemeral) key ring is used.
+            services.AddDataProtection()
+                .PersistKeysToDbContext<AppDbContext>()
+                .SetApplicationName("tracks");
         }
 
         services.AddAutoMapper(cfg => cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
