@@ -141,6 +141,8 @@ export type RunSongResponse = {
   albumArtUrl: null | string;
   playedAt: string;
   offsetSeconds: number | string;
+  isTopSpeed: boolean;
+  isFastestPace: boolean;
 };
 export type RunResponse = {
   activityId: number | string;

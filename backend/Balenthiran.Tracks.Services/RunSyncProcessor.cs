@@ -12,6 +12,7 @@ public class RunSyncProcessor(
     IStravaClient strava,
     ISpotifyClient spotify,
     IRunSongMatcher matcher,
+    IRunHighlights highlights,
     IRunStore store,
     ILogger<RunSyncProcessor> logger) : IRunSyncProcessor
 {
@@ -47,6 +48,7 @@ public class RunSyncProcessor(
 
         var plays = await spotify.GetRecentlyPlayedAsync(user.Id, activity.StartDate, cancellationToken);
         var songs = matcher.Match(activity.StartDate, TimeSpan.FromSeconds(activity.ElapsedTimeSeconds), plays);
+        songs = await WithHighlightsAsync(user.Id, activity, songs, cancellationToken);
 
         await store.SaveAsync(user.Id, new Run
         {
@@ -58,5 +60,38 @@ public class RunSyncProcessor(
             Songs = songs,
         }, cancellationToken);
         logger.LogInformation("Stored run {ActivityId} with {SongCount} songs.", activityId, songs.Count);
+    }
+
+    // Highlights are a bonus: the streams being unavailable (no GPS, rate limit, Strava down) must
+    // never cost the run itself, which can only be paired with Spotify's recent plays right now.
+    private async Task<IReadOnlyList<IRunSong>> WithHighlightsAsync(
+        Guid userId, IStravaActivity activity, IReadOnlyList<IRunSong> songs, CancellationToken cancellationToken)
+    {
+        if (songs.Count == 0)
+            return songs;
+
+        IRunHighlightPicks picks;
+        try
+        {
+            var streams = await strava.GetStreamsAsync(userId, activity.Id, cancellationToken);
+            picks = highlights.Pick(songs, activity.ElapsedTimeSeconds, streams);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Storing activity {ActivityId} without highlights: its streams could not be read.", activity.Id);
+            return songs;
+        }
+
+        return songs.Select((song, index) => (IRunSong)new RunSong
+        {
+            Name = song.Name,
+            Artists = song.Artists,
+            AlbumArtUrl = song.AlbumArtUrl,
+            PlayedFrom = song.PlayedFrom,
+            PlayedTo = song.PlayedTo,
+            OffsetSeconds = song.OffsetSeconds,
+            IsTopSpeed = picks.TopSpeedIndex == index,
+            IsFastestPace = picks.FastestPaceIndex == index,
+        }).ToList();
     }
 }

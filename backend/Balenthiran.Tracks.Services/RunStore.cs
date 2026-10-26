@@ -33,6 +33,8 @@ public class RunStore(AppDbContext db) : IRunStore
                 PlayedFrom = song.PlayedFrom.ToUniversalTime(),
                 PlayedTo = song.PlayedTo.ToUniversalTime(),
                 OffsetSeconds = song.OffsetSeconds,
+                IsTopSpeed = song.IsTopSpeed,
+                IsFastestPace = song.IsFastestPace,
             }).ToList(),
         });
         await db.SaveChangesAsync(cancellationToken);
@@ -62,6 +64,8 @@ public class RunStore(AppDbContext db) : IRunStore
                 PlayedFrom = s.PlayedFrom,
                 PlayedTo = s.PlayedTo,
                 OffsetSeconds = s.OffsetSeconds,
+                IsTopSpeed = s.IsTopSpeed,
+                IsFastestPace = s.IsFastestPace,
             }).ToList(),
         }).ToList();
     }

@@ -26,7 +26,8 @@ public static class RunsRoutes
             run.StartedAt,
             run.ElapsedSeconds,
             run.Songs.Select(song => new RunSongResponse(
-                song.Name, song.Artists, song.AlbumArtUrl, song.PlayedTo, song.OffsetSeconds)).ToList()));
+                song.Name, song.Artists, song.AlbumArtUrl, song.PlayedTo, song.OffsetSeconds,
+                song.IsTopSpeed, song.IsFastestPace)).ToList()));
 
         return TypedResults.Ok(runs.ToList());
     }
