@@ -147,6 +147,35 @@ test('BEH-HIGH-3 / BEH-HIGH-4: the top-speed and fastest-pace songs are labelled
   await page.getByRole('region', { name: 'Runs' }).screenshot({ path: 'e2e/screenshots/runs-highlights-phone.png', animations: 'disabled' });
 });
 
+test('BEH-HIGH-2: a run names the album or playlist it ran to, or says a type, mixed, or nothing', async ({ page }) => {
+  const song = { name: 'Song', artists: ['Artist A'], albumArtUrl: null, playedAt: '2026-10-16T18:04:00Z', offsetSeconds: 0, isTopSpeed: false, isFastestPace: false };
+  const run = (activityId: number, name: string, songs: object[], contextType: string | null, contextName: string | null) => ({
+    activityId, name, sportType: 'Run', startedAt: '2026-10-16T18:00:00Z', elapsedSeconds: 1800, songs, contextType, contextName,
+  });
+  await page.route('**/api/runs', (route) =>
+    route.fulfill({
+      json: [
+        run(1, 'Named', [song], 'album', 'Abbey Road'),
+        run(2, 'Unnamed', [song], 'playlist', null),
+        run(3, 'Mixed', [song], 'mixed', null),
+        run(4, 'Before', [song], null, null),
+        run(5, 'Silent', [], 'album', 'Ignored'),
+      ],
+    }),
+  );
+  await page.goto('./');
+
+  const runs = page.getByRole('region', { name: 'Runs' }).locator('ul > li').filter({ has: page.locator('h3') });
+  await expect(runs.nth(0)).toContainText('Run to: Abbey Road');
+  await expect(runs.nth(1)).toContainText('Run to: a playlist');
+  await expect(runs.nth(2)).toContainText('Run to: a mix of songs');
+  await expect(runs.nth(3)).not.toContainText('Run to');
+  await expect(runs.nth(4)).not.toContainText('Run to');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('region', { name: 'Runs' }).screenshot({ path: 'e2e/screenshots/runs-context-phone.png', animations: 'disabled' });
+});
+
 test('BEH-SYNC-4: home page explains an empty run list', async ({ page }) => {
   await page.goto('./');
 

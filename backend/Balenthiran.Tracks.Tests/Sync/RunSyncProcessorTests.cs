@@ -33,6 +33,21 @@ public class RunSyncProcessorTests
     {
         public List<Guid> Users { get; } = [];
 
+        /// <summary>What the name lookup answers; null is a 404, <see cref="NameLookupFails"/> an unreachable Spotify.</summary>
+        public string? ContextName { get; init; }
+
+        public bool NameLookupFails { get; init; }
+
+        public List<(string Type, string Uri)> NameLookups { get; } = [];
+
+        public Task<string?> GetContextNameAsync(Guid userId, string contextType, string contextUri, CancellationToken cancellationToken = default)
+        {
+            NameLookups.Add((contextType, contextUri));
+            return NameLookupFails
+                ? throw new UpstreamServiceException("Spotify was unreachable.")
+                : Task.FromResult(ContextName);
+        }
+
         public DateTimeOffset? After { get; private set; }
 
         public Task<IReadOnlyList<ISpotifyPlay>> GetRecentlyPlayedAsync(Guid userId, DateTimeOffset after, CancellationToken cancellationToken = default)
@@ -52,6 +67,14 @@ public class RunSyncProcessorTests
     {
         TrackName = name, Artists = ["A"], DurationMs = 240000, PlayedAt = Start.AddMinutes(endsAfterMinutes),
     };
+
+    private static SpotifyPlay PlayFrom(string name, int endsAfterMinutes, string? type, string? uri)
+    {
+        var play = Play(name, endsAfterMinutes);
+        play.ContextType = type;
+        play.ContextUri = uri;
+        return play;
+    }
 
     private static StravaSettings ConfiguredStrava => new() { ClientId = "i", ClientSecret = "s" };
 
@@ -94,6 +117,73 @@ public class RunSyncProcessorTests
         await Build(db, new FakeStrava(Activity()), new FakeSpotify()).ProcessAsync(Athlete, 55);
 
         Assert.Empty(Assert.Single(await RunsOf(db, user.Id)).Songs);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-HIGH-2")]
+    public async Task A_run_whose_songs_mostly_share_a_context_is_stored_with_its_type_and_name()
+    {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
+        var spotify = new FakeSpotify(
+            PlayFrom("a", 8, "album", "spotify:album:abc"), PlayFrom("b", 12, "album", "spotify:album:abc"), PlayFrom("c", 20, null, null))
+        { ContextName = "Abbey Road" };
+
+        await Build(db, new FakeStrava(Activity()), spotify).ProcessAsync(Athlete, 55);
+
+        var run = Assert.Single(await RunsOf(db, user.Id));
+        Assert.Equal("album", run.ContextType);
+        Assert.Equal("Abbey Road", run.ContextName);
+        Assert.Equal([("album", "spotify:album:abc")], spotify.NameLookups);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-HIGH-2")]
+    public async Task A_run_whose_songs_are_mixed_is_stored_as_mixed_without_a_lookup()
+    {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
+        var spotify = new FakeSpotify(PlayFrom("a", 8, "album", "spotify:album:abc"), PlayFrom("b", 12, "playlist", "spotify:playlist:xyz"));
+
+        await Build(db, new FakeStrava(Activity()), spotify).ProcessAsync(Athlete, 55);
+
+        var run = Assert.Single(await RunsOf(db, user.Id));
+        Assert.Equal("mixed", run.ContextType);
+        Assert.Null(run.ContextName);
+        Assert.Empty(spotify.NameLookups);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    [Trait("Behaviour", "BEH-HIGH-2")]
+    public async Task A_context_name_that_cannot_be_read_still_stores_the_run_with_its_type(bool unreachable)
+    {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
+        // Null name = Spotify answered 403/404 (a private or editorial playlist); unreachable throws.
+        var spotify = new FakeSpotify(PlayFrom("a", 8, "playlist", "spotify:playlist:xyz")) { ContextName = null, NameLookupFails = unreachable };
+
+        await Build(db, new FakeStrava(Activity()), spotify).ProcessAsync(Athlete, 55);
+
+        var run = Assert.Single(await RunsOf(db, user.Id));
+        Assert.Equal("playlist", run.ContextType);
+        Assert.Null(run.ContextName);
+        Assert.Equal(["a"], run.Songs.Select(s => s.Name));
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-HIGH-2")]
+    public async Task A_run_with_no_song_context_stores_none()
+    {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
+
+        await Build(db, new FakeStrava(Activity()), new FakeSpotify(Play("queued", 8))).ProcessAsync(Athlete, 55);
+
+        var run = Assert.Single(await RunsOf(db, user.Id));
+        Assert.Null(run.ContextType);
+        Assert.Null(run.ContextName);
     }
 
     [Fact]

@@ -12,4 +12,6 @@ public class RunSong : IRunSong
     public int OffsetSeconds { get; set; }
     public bool IsTopSpeed { get; set; }
     public bool IsFastestPace { get; set; }
+    public string? ContextType { get; set; }
+    public string? ContextUri { get; set; }
 }

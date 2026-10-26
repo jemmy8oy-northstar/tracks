@@ -10,4 +10,6 @@ public class SpotifyPlay : ISpotifyPlay
     public string? AlbumArtUrl { get; set; }
     public int DurationMs { get; set; }
     public DateTimeOffset PlayedAt { get; set; }
+    public string? ContextType { get; set; }
+    public string? ContextUri { get; set; }
 }

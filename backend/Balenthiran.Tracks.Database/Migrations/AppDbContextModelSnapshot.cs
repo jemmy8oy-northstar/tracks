@@ -32,6 +32,12 @@ namespace Balenthiran.Tracks.Database.Migrations
                     b.Property<long>("ActivityId")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("ContextName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContextType")
+                        .HasColumnType("text");
+
                     b.Property<int>("ElapsedSeconds")
                         .HasColumnType("integer");
 

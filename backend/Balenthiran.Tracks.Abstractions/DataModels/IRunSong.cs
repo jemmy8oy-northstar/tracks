@@ -17,4 +17,10 @@ public interface IRunSong
 
     /// <summary>The song with the fastest average pace over the run (BEH-HIGH-4). False for a run with no GPS.</summary>
     bool IsFastestPace { get; }
+
+    /// <summary>The kind of Spotify context the song was played from (BEH-HIGH-2): playlist, album, artist, show...; null for a queue. Only set while syncing, never stored per song.</summary>
+    string? ContextType { get; }
+
+    /// <summary>The Spotify uri of that context (spotify:playlist:...); null for a queue. Only set while syncing.</summary>
+    string? ContextUri { get; }
 }

@@ -151,6 +151,8 @@ export type RunResponse = {
   startedAt: string;
   elapsedSeconds: number | string;
   songs: RunSongResponse[];
+  contextType: null | string;
+  contextName: null | string;
 };
 export const {
   useGetStatusQuery,
