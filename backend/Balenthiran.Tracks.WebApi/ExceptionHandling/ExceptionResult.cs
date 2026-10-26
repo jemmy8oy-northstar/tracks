@@ -34,6 +34,7 @@ public readonly record struct ExceptionResult(int StatusCode, string Title, stri
         UnauthorizedException e => new(StatusCodes.Status401Unauthorized, "Not authenticated", e.ErrorCode, ExposeMessage: true),
         ForbiddenException e => new(StatusCodes.Status403Forbidden, "Forbidden", e.ErrorCode, ExposeMessage: true),
         UpstreamServiceException e => new(StatusCodes.Status502BadGateway, "Upstream service failure", e.ErrorCode, ExposeMessage: true),
+        StravaFullException e => new(StatusCodes.Status503ServiceUnavailable, "Tracks is full", e.ErrorCode, ExposeMessage: true),
         // Defensive: a future AppException subclass with no explicit mapping is still an
         // anticipated failure — surface its code and message as a 400 rather than a 500.
         AppException e => new(StatusCodes.Status400BadRequest, "Request failed", e.ErrorCode, ExposeMessage: true),

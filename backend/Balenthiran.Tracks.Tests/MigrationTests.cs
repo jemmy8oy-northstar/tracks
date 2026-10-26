@@ -19,6 +19,14 @@ public class MigrationTests
     }
 
     [Fact]
+    public void The_model_stores_data_protection_keys()
+    {
+        using var db = Postgres();
+
+        Assert.NotNull(db.Model.FindEntityType(typeof(Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey)));
+    }
+
+    [Fact]
     public void There_is_a_migration_to_apply()
     {
         using var db = Postgres();

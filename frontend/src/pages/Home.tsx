@@ -1,5 +1,6 @@
+import { useSearchParams } from 'react-router-dom';
 import Hero from '../components/Hero';
-import { Button } from '../components/ui';
+import { Badge, Button } from '../components/ui';
 import { apiHref } from '../api/emptyApi';
 import { useGetMeQuery, useGetRunsQuery, useDisconnectSpotifyMutation, useSignOutMutation } from '../api/generatedApi';
 
@@ -14,6 +15,13 @@ const formatDuration = (seconds: number | string) => {
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+// "Run to: Abbey Road", or "Run to: an album" when Spotify would not name it, or the mixed case.
+const contextLine = (type: string, name: string | null) => {
+  if (type === 'mixed') return 'Run to: a mix of songs';
+  if (name !== null) return `Run to: ${name}`;
+  return `Run to: ${/^[aeiou]/.test(type) ? 'an' : 'a'} ${type}`;
+};
 
 // Real anchors (full-page navigation to the API), styled like the design-system Button.
 const linkButton = 'ui-button ui-button--primary ui-button--lg';
@@ -42,13 +50,28 @@ const Runs = () => {
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                   {formatDate(run.startedAt)} · {formatDuration(run.elapsedSeconds)}
                 </p>
+                {/* BEH-HIGH-2: what most of the songs came from; nothing for a run with no songs or one synced before this existed. */}
+                {run.songs.length > 0 && run.contextType && (
+                  <p style={{ fontSize: '0.9rem' }}>{contextLine(run.contextType, run.contextName)}</p>
+                )}
                 {run.songs.length === 0 ? (
                   <p style={{ color: 'var(--text-secondary)' }}>No songs found for this run.</p>
                 ) : (
                   <ol style={{ paddingLeft: '20px', marginTop: '8px' }}>
                     {run.songs.map((song) => (
                       <li key={`${song.playedAt}-${song.name}`}>
+                        {/* BEH-HIGH-1: the minute into the run it started; one already playing at the start reads 0:00. */}
+                        <span style={{ color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                          {formatDuration(Math.max(0, Number(song.offsetSeconds)))}
+                        </span>{' '}
                         {song.name} <span style={{ color: 'var(--text-secondary)' }}>· {song.artists.join(', ')}</span>
+                        {/* BEH-HIGH-3 / BEH-HIGH-4: the song at the run's top speed, and the one with the fastest average pace. */}
+                        {song.isTopSpeed && (
+                          <Badge variant="accent" style={{ marginLeft: '8px' }}>⚡ top speed</Badge>
+                        )}
+                        {song.isFastestPace && (
+                          <Badge variant="success" style={{ marginLeft: '8px' }}>fastest pace</Badge>
+                        )}
                       </li>
                     ))}
                   </ol>
@@ -87,6 +110,8 @@ const Account = ({ spotifyConnected, onChanged }: { spotifyConnected: boolean; o
 
 const Home = () => {
   const { data, isLoading, error, refetch } = useGetMeQuery();
+  // The Strava callback sends a runner here with ?error=full when Strava's athlete cap is hit.
+  const full = useSearchParams()[0].get('error') === 'full';
   // RTK Query keeps the last good data after a failed refetch; a 401 after sign-out must win.
   const me = error ? undefined : data;
   const signedOut = error !== undefined && 'status' in error && error.status === 401;
@@ -114,6 +139,11 @@ const Home = () => {
     <Hero>
       {signedOut && (
         <div>
+          {full && (
+            <p role="alert" style={{ ...note, color: '#f87171', marginBottom: '16px' }}>
+              Tracks is full for now. Please try again later.
+            </p>
+          )}
           <a className={linkButton} href={apiHref('api/auth/strava')}>
             <span className="ui-button__label">Sign in with Strava</span>
           </a>

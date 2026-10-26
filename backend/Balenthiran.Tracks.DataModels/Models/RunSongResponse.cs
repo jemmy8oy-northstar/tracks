@@ -6,4 +6,6 @@ public sealed record RunSongResponse(
     IReadOnlyList<string> Artists,
     string? AlbumArtUrl,
     DateTimeOffset PlayedAt,
-    int OffsetSeconds);
+    int OffsetSeconds,
+    bool IsTopSpeed,
+    bool IsFastestPace);

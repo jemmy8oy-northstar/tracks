@@ -62,6 +62,42 @@ public class ClientTests
     }
 
     [Fact]
+    [Trait("Behaviour", "BEH-HIGH-3")]
+    public async Task Strava_client_reads_the_time_distance_and_velocity_streams()
+    {
+        var handler = new FakeHttpMessageHandler().Reply(
+            """{"time":{"data":[0,1,2]},"distance":{"data":[0.0,3.1,6.4]},"velocity_smooth":{"data":[3,3.1,3.3]}}""");
+        var client = new StravaClient(new HttpClient(handler), new StubTokenProvider());
+
+        var streams = await client.GetStreamsAsync(User, 55);
+
+        Assert.NotNull(streams);
+        Assert.Equal([0, 1, 2], streams.TimeSeconds);
+        Assert.Equal([0.0, 3.1, 6.4], streams.DistanceMetres);
+        Assert.Equal([3, 3.1, 3.3], streams.VelocityMetresPerSecond);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal(
+            "https://www.strava.com/api/v3/activities/55/streams?keys=time,distance,velocity_smooth&key_by_type=true",
+            request.RequestUri!.ToString());
+        Assert.Equal("Bearer", request.Headers.Authorization!.Scheme);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-HIGH-3")]
+    public async Task Strava_client_gives_no_streams_for_an_activity_without_GPS()
+    {
+        var handler = new FakeHttpMessageHandler()
+            .Reply("{}", HttpStatusCode.NotFound)
+            .Reply("""{"time":{"data":[0,1,2]}}""")
+            .Reply("{}", HttpStatusCode.TooManyRequests);
+        var client = new StravaClient(new HttpClient(handler), new StubTokenProvider());
+
+        Assert.Null(await client.GetStreamsAsync(User, 1));
+        Assert.Null(await client.GetStreamsAsync(User, 1));
+        await Assert.ThrowsAsync<UpstreamServiceException>(() => client.GetStreamsAsync(User, 1));
+    }
+
+    [Fact]
     public async Task Spotify_client_reads_plays_asking_for_the_most_recent_fifty_after_the_run_start()
     {
         var handler = new FakeHttpMessageHandler().Reply(PlaysJson);
@@ -84,6 +120,67 @@ public class ClientTests
             $"https://api.spotify.com/v1/me/player/recently-played?limit=50&after={after.ToUnixTimeMilliseconds()}",
             request.RequestUri!.ToString());
         Assert.Equal("Bearer", request.Headers.Authorization!.Scheme);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-HIGH-2")]
+    public async Task Spotify_client_reads_the_context_of_each_play_and_null_for_a_queue()
+    {
+        var handler = new FakeHttpMessageHandler().Reply("""
+            {"items":[
+              {"track":{"id":"t1","name":"One","duration_ms":1,"artists":[],"album":{"images":[]}},
+               "played_at":"2026-10-17T09:10:00.000Z","context":{"type":"playlist","uri":"spotify:playlist:p1"}},
+              {"track":{"id":"t2","name":"Two","duration_ms":1,"artists":[],"album":{"images":[]}},
+               "played_at":"2026-10-17T09:05:00.000Z","context":null},
+              {"track":{"id":"t3","name":"Three","duration_ms":1,"artists":[],"album":{"images":[]}},
+               "played_at":"2026-10-17T09:04:00.000Z"}
+            ]}
+            """);
+        var client = new SpotifyClient(new HttpClient(handler), new StubTokenProvider());
+
+        var plays = await client.GetRecentlyPlayedAsync(User, DateTimeOffset.UtcNow);
+
+        Assert.Equal("playlist", plays[0].ContextType);
+        Assert.Equal("spotify:playlist:p1", plays[0].ContextUri);
+        Assert.Null(plays[1].ContextType);
+        Assert.Null(plays[1].ContextUri);
+        Assert.Null(plays[2].ContextUri);
+    }
+
+    [Theory]
+    [InlineData("album", "spotify:album:a1", "https://api.spotify.com/v1/albums/a1")]
+    [InlineData("playlist", "spotify:playlist:p1", "https://api.spotify.com/v1/playlists/p1?fields=name")]
+    [InlineData("artist", "spotify:artist:r1", "https://api.spotify.com/v1/artists/r1")]
+    [Trait("Behaviour", "BEH-HIGH-2")]
+    public async Task Spotify_client_looks_a_context_name_up_with_the_users_token(string type, string uri, string expectedUrl)
+    {
+        var handler = new FakeHttpMessageHandler().Reply("""{"name":"Abbey Road","id":"x"}""");
+        var tokens = new StubTokenProvider();
+        var client = new SpotifyClient(new HttpClient(handler), tokens);
+
+        Assert.Equal("Abbey Road", await client.GetContextNameAsync(User, type, uri));
+
+        Assert.Equal([User], tokens.Users);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal(expectedUrl, request.RequestUri!.ToString());
+        Assert.Equal("Bearer", request.Headers.Authorization!.Scheme);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-HIGH-2")]
+    public async Task Spotify_client_gives_no_name_when_Spotify_refuses_or_the_type_has_no_lookup()
+    {
+        var handler = new FakeHttpMessageHandler()
+            .Reply("{}", HttpStatusCode.NotFound)
+            .Reply("{}", HttpStatusCode.Forbidden)
+            .Reply("{}", HttpStatusCode.TooManyRequests);
+        var client = new SpotifyClient(new HttpClient(handler), new StubTokenProvider());
+
+        Assert.Null(await client.GetContextNameAsync(User, "playlist", "spotify:playlist:37i9dQZF1DX"));
+        Assert.Null(await client.GetContextNameAsync(User, "playlist", "spotify:playlist:private"));
+        Assert.Null(await client.GetContextNameAsync(User, "album", "spotify:album:a1"));
+        Assert.Null(await client.GetContextNameAsync(User, "show", "spotify:show:s1"));
+        Assert.Equal(3, handler.Requests.Count);
     }
 
     [Fact]

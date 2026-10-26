@@ -23,6 +23,8 @@ public class RunStore(AppDbContext db) : IRunStore
             SportType = run.SportType,
             StartedAt = run.StartedAt.ToUniversalTime(), // Postgres timestamptz only takes offset 0.
             ElapsedSeconds = run.ElapsedSeconds,
+            ContextType = run.ContextType,
+            ContextName = run.ContextName,
             Songs = run.Songs.Select((song, position) => new RunSongEntity
             {
                 Id = Guid.NewGuid(),
@@ -33,6 +35,8 @@ public class RunStore(AppDbContext db) : IRunStore
                 PlayedFrom = song.PlayedFrom.ToUniversalTime(),
                 PlayedTo = song.PlayedTo.ToUniversalTime(),
                 OffsetSeconds = song.OffsetSeconds,
+                IsTopSpeed = song.IsTopSpeed,
+                IsFastestPace = song.IsFastestPace,
             }).ToList(),
         });
         await db.SaveChangesAsync(cancellationToken);
@@ -54,6 +58,8 @@ public class RunStore(AppDbContext db) : IRunStore
             SportType = r.SportType,
             StartedAt = r.StartedAt,
             ElapsedSeconds = r.ElapsedSeconds,
+            ContextType = r.ContextType,
+            ContextName = r.ContextName,
             Songs = r.Songs.OrderBy(s => s.Position).Select(s => (IRunSong)new RunSong
             {
                 Name = s.Name,
@@ -62,6 +68,8 @@ public class RunStore(AppDbContext db) : IRunStore
                 PlayedFrom = s.PlayedFrom,
                 PlayedTo = s.PlayedTo,
                 OffsetSeconds = s.OffsetSeconds,
+                IsTopSpeed = s.IsTopSpeed,
+                IsFastestPace = s.IsFastestPace,
             }).ToList(),
         }).ToList();
     }

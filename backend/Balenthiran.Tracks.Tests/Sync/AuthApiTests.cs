@@ -165,6 +165,36 @@ public class AuthApiTests
     }
 
     [Fact]
+    public async Task Strava_refusing_a_new_athlete_for_its_cap_sends_them_home_as_full_and_creates_nobody_BEH_CONNECT_4()
+    {
+        using var factory = new SyncApiFactory();
+        var browser = factory.Browser();
+        var state = await SignIn.StartStravaAsync(browser);
+        factory.Http.Reply("""{"message":"Forbidden","errors":[{"resource":"Application","field":"athlete","code":"Limit of connected athletes exceeded"}]}""", HttpStatusCode.Forbidden);
+
+        var response = await browser.GetAsync($"/api/auth/strava/callback?code=c&state={state}&scope={SignIn.GrantedScope}");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("https://localhost/?error=full", response.Headers.Location!.ToString());
+        Assert.DoesNotContain(response.Headers.GetValues("Set-Cookie"), c => c.StartsWith("tracks.session="));
+        Assert.Equal(0, await factory.WithDb(db => db.Users.CountAsync()));
+    }
+
+    [Fact]
+    public async Task A_403_from_Strava_for_any_other_reason_is_not_reported_as_full_BEH_CONNECT_4()
+    {
+        using var factory = new SyncApiFactory();
+        var browser = factory.Browser();
+        var state = await SignIn.StartStravaAsync(browser);
+        factory.Http.Reply("""{"message":"Forbidden"}""", HttpStatusCode.Forbidden);
+
+        var response = await browser.GetAsync($"/api/auth/strava/callback?code=c&state={state}&scope={SignIn.GrantedScope}");
+
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+        Assert.Null(response.Headers.Location);
+    }
+
+    [Fact]
     public async Task Me_is_401_when_signed_out()
     {
         using var factory = new SyncApiFactory();

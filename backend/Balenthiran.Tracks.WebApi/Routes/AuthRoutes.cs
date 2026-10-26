@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Balenthiran.Tracks.Abstractions.DataModels;
 using Balenthiran.Tracks.Abstractions.Exceptions;
 using Balenthiran.Tracks.Abstractions.Services;
 using Balenthiran.Tracks.DataModels.Models;
@@ -57,7 +58,17 @@ public static class AuthRoutes
         if (error is not null || string.IsNullOrEmpty(code))
             throw new ValidationException("Strava did not grant access.");
 
-        var user = await strava.SignInAsync(code, scope, cancellationToken);
+        IUser user;
+        try
+        {
+            user = await strava.SignInAsync(code, scope, cancellationToken);
+        }
+        catch (StravaFullException)
+        {
+            // A browser navigation, not an API call: send the runner home with a flag rather than a ProblemDetails page.
+            return TypedResults.Redirect(BaseUrl(http, config) + "/?error=full");
+        }
+
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())], CookieAuthenticationDefaults.AuthenticationScheme);
         await http.SignInAsync(new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = true });
 

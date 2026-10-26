@@ -10,4 +10,6 @@ public class Run : IRun
     public DateTimeOffset StartedAt { get; set; }
     public int ElapsedSeconds { get; set; }
     public IReadOnlyList<IRunSong> Songs { get; set; } = [];
+    public string? ContextType { get; set; }
+    public string? ContextName { get; set; }
 }

@@ -23,6 +23,8 @@ public class RunSongMatcher : IRunSongMatcher
                 PlayedFrom = p.From,
                 PlayedTo = p.Play.PlayedAt,
                 OffsetSeconds = (int)(p.From - runStart).TotalSeconds,
+                ContextType = p.Play.ContextType,
+                ContextUri = p.Play.ContextUri,
             })
             .ToList();
     }

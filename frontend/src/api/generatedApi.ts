@@ -141,6 +141,8 @@ export type RunSongResponse = {
   albumArtUrl: null | string;
   playedAt: string;
   offsetSeconds: number | string;
+  isTopSpeed: boolean;
+  isFastestPace: boolean;
 };
 export type RunResponse = {
   activityId: number | string;
@@ -149,6 +151,8 @@ export type RunResponse = {
   startedAt: string;
   elapsedSeconds: number | string;
   songs: RunSongResponse[];
+  contextType: null | string;
+  contextName: null | string;
 };
 export const {
   useGetStatusQuery,
