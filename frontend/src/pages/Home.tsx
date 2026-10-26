@@ -49,6 +49,10 @@ const Runs = () => {
                   <ol style={{ paddingLeft: '20px', marginTop: '8px' }}>
                     {run.songs.map((song) => (
                       <li key={`${song.playedAt}-${song.name}`}>
+                        {/* BEH-HIGH-1: the minute into the run it started; one already playing at the start reads 0:00. */}
+                        <span style={{ color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                          {formatDuration(Math.max(0, Number(song.offsetSeconds)))}
+                        </span>{' '}
                         {song.name} <span style={{ color: 'var(--text-secondary)' }}>· {song.artists.join(', ')}</span>
                       </li>
                     ))}

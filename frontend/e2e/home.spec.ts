@@ -84,6 +84,35 @@ test('BEH-SYNC-4: home page lists each run with its songs, and says when a run h
   await runs.screenshot({ path: 'e2e/screenshots/runs-phone.png', animations: 'disabled' });
 });
 
+test('BEH-HIGH-1: each song shows the minute of the run it started at', async ({ page }) => {
+  await page.route('**/api/runs', (route) =>
+    route.fulfill({
+      json: [
+        {
+          activityId: 3, name: 'Long Run', sportType: 'Run', startedAt: '2026-10-16T18:00:00Z',
+          elapsedSeconds: 4000,
+          songs: [
+            // Already playing when the run started, so its offset is negative.
+            { name: 'Warm Up', artists: ['Artist A'], albumArtUrl: null, playedAt: '2026-10-16T18:02:00Z', offsetSeconds: -60 },
+            { name: 'Middle', artists: ['Artist B'], albumArtUrl: null, playedAt: '2026-10-16T18:16:00Z', offsetSeconds: 760 },
+            { name: 'Late', artists: ['Artist C'], albumArtUrl: null, playedAt: '2026-10-16T19:05:00Z', offsetSeconds: 3725 },
+          ],
+        },
+      ],
+    }),
+  );
+  await page.goto('./');
+
+  const songs = page.getByRole('region', { name: 'Runs' }).locator('ol > li');
+  await expect(songs).toHaveCount(3);
+  await expect(songs.nth(0)).toContainText('0:00 Warm Up');
+  await expect(songs.nth(1)).toContainText('12:40 Middle');
+  await expect(songs.nth(2)).toContainText('1:02:05 Late');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('region', { name: 'Runs' }).screenshot({ path: 'e2e/screenshots/runs-song-minutes-phone.png', animations: 'disabled' });
+});
+
 test('BEH-SYNC-4: home page explains an empty run list', async ({ page }) => {
   await page.goto('./');
 
