@@ -9,4 +9,10 @@ public interface IRun
     DateTimeOffset StartedAt { get; }
     int ElapsedSeconds { get; }
     IReadOnlyList<IRunSong> Songs { get; }
+
+    /// <summary>What most of the songs came from (BEH-HIGH-2): playlist, album, artist..., or "mixed" when none held a majority. Null when unknown (a run synced earlier, or no song had a context).</summary>
+    string? ContextType { get; }
+
+    /// <summary>The name of that context; null when mixed, unknown, or Spotify would not tell us.</summary>
+    string? ContextName { get; }
 }

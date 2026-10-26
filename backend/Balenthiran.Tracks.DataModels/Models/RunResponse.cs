@@ -7,4 +7,6 @@ public sealed record RunResponse(
     string SportType,
     DateTimeOffset StartedAt,
     int ElapsedSeconds,
-    IReadOnlyList<RunSongResponse> Songs);
+    IReadOnlyList<RunSongResponse> Songs,
+    string? ContextType,
+    string? ContextName);

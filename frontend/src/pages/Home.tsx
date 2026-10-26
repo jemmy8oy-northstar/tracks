@@ -16,6 +16,13 @@ const formatDuration = (seconds: number | string) => {
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
+// "Run to: Abbey Road", or "Run to: an album" when Spotify would not name it, or the mixed case.
+const contextLine = (type: string, name: string | null) => {
+  if (type === 'mixed') return 'Run to: a mix of songs';
+  if (name !== null) return `Run to: ${name}`;
+  return `Run to: ${/^[aeiou]/.test(type) ? 'an' : 'a'} ${type}`;
+};
+
 // Real anchors (full-page navigation to the API), styled like the design-system Button.
 const linkButton = 'ui-button ui-button--primary ui-button--lg';
 const note = { color: 'var(--text-secondary)', maxWidth: '480px', margin: '16px auto 0', fontSize: '0.95rem' } as const;
@@ -43,6 +50,10 @@ const Runs = () => {
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                   {formatDate(run.startedAt)} · {formatDuration(run.elapsedSeconds)}
                 </p>
+                {/* BEH-HIGH-2: what most of the songs came from; nothing for a run with no songs or one synced before this existed. */}
+                {run.songs.length > 0 && run.contextType && (
+                  <p style={{ fontSize: '0.9rem' }}>{contextLine(run.contextType, run.contextName)}</p>
+                )}
                 {run.songs.length === 0 ? (
                   <p style={{ color: 'var(--text-secondary)' }}>No songs found for this run.</p>
                 ) : (

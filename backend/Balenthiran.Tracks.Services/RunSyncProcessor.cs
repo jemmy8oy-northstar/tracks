@@ -48,6 +48,7 @@ public class RunSyncProcessor(
 
         var plays = await spotify.GetRecentlyPlayedAsync(user.Id, activity.StartDate, cancellationToken);
         var songs = matcher.Match(activity.StartDate, TimeSpan.FromSeconds(activity.ElapsedTimeSeconds), plays);
+        var context = await ContextOfAsync(user.Id, activity.Id, songs, cancellationToken);
         songs = await WithHighlightsAsync(user.Id, activity, songs, cancellationToken);
 
         await store.SaveAsync(user.Id, new Run
@@ -58,8 +59,30 @@ public class RunSyncProcessor(
             StartedAt = activity.StartDate,
             ElapsedSeconds = activity.ElapsedTimeSeconds,
             Songs = songs,
+            ContextType = context.Type,
+            ContextName = context.Name,
         }, cancellationToken);
         logger.LogInformation("Stored run {ActivityId} with {SongCount} songs.", activityId, songs.Count);
+    }
+
+    // The context is a bonus too: a name Spotify will not give (a private or editorial playlist, a
+    // rate limit, no network) leaves the type without a name and never costs the run.
+    private async Task<(string? Type, string? Name)> ContextOfAsync(
+        Guid userId, long activityId, IReadOnlyList<IRunSong> songs, CancellationToken cancellationToken)
+    {
+        var pick = RunContextMajority.Pick(songs);
+        if (pick.Uri is null)
+            return (pick.Type, null);
+
+        try
+        {
+            return (pick.Type, await spotify.GetContextNameAsync(userId, pick.Type!, pick.Uri, cancellationToken));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Storing activity {ActivityId} with its {ContextType} unnamed: the name could not be read.", activityId, pick.Type);
+            return (pick.Type, null);
+        }
     }
 
     // Highlights are a bonus: the streams being unavailable (no GPS, rate limit, Strava down) must

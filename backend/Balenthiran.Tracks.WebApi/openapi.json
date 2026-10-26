@@ -287,7 +287,9 @@
           "sportType",
           "startedAt",
           "elapsedSeconds",
-          "songs"
+          "songs",
+          "contextType",
+          "contextName"
         ],
         "type": "object",
         "properties": {
@@ -322,6 +324,18 @@
             "items": {
               "$ref": "#/components/schemas/RunSongResponse"
             }
+          },
+          "contextType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contextName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
