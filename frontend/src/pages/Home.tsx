@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 import Hero from '../components/Hero';
-import { Button } from '../components/ui';
+import { Badge, Button } from '../components/ui';
 import { apiHref } from '../api/emptyApi';
 import { useGetMeQuery, useGetRunsQuery, useDisconnectSpotifyMutation, useSignOutMutation } from '../api/generatedApi';
 
@@ -54,6 +54,13 @@ const Runs = () => {
                           {formatDuration(Math.max(0, Number(song.offsetSeconds)))}
                         </span>{' '}
                         {song.name} <span style={{ color: 'var(--text-secondary)' }}>· {song.artists.join(', ')}</span>
+                        {/* BEH-HIGH-3 / BEH-HIGH-4: the song at the run's top speed, and the one with the fastest average pace. */}
+                        {song.isTopSpeed && (
+                          <Badge variant="accent" style={{ marginLeft: '8px' }}>⚡ top speed</Badge>
+                        )}
+                        {song.isFastestPace && (
+                          <Badge variant="success" style={{ marginLeft: '8px' }}>fastest pace</Badge>
+                        )}
                       </li>
                     ))}
                   </ol>

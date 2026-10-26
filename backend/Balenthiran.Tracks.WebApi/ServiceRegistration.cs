@@ -55,6 +55,7 @@ public static class ServiceRegistration
         services.AddSingleton<ISpotifyClient>(sp => new SpotifyClient(
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<ISpotifyTokenProvider>()));
         services.AddSingleton<IRunSongMatcher, RunSongMatcher>();
+        services.AddSingleton<IRunHighlights, RunHighlights>();
         services.AddScoped<IRunStore, RunStore>();
         services.AddSingleton<IRunSyncQueue, RunSyncQueue>();
         services.AddScoped<IRunSyncProcessor, RunSyncProcessor>();

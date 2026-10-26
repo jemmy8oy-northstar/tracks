@@ -331,7 +331,9 @@
           "artists",
           "albumArtUrl",
           "playedAt",
-          "offsetSeconds"
+          "offsetSeconds",
+          "isTopSpeed",
+          "isFastestPace"
         ],
         "type": "object",
         "properties": {
@@ -361,6 +363,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "isTopSpeed": {
+            "type": "boolean"
+          },
+          "isFastestPace": {
+            "type": "boolean"
           }
         }
       },

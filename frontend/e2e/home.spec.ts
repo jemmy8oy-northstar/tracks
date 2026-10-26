@@ -113,6 +113,40 @@ test('BEH-HIGH-1: each song shows the minute of the run it started at', async ({
   await page.getByRole('region', { name: 'Runs' }).screenshot({ path: 'e2e/screenshots/runs-song-minutes-phone.png', animations: 'disabled' });
 });
 
+test('BEH-HIGH-3 / BEH-HIGH-4: the top-speed and fastest-pace songs are labelled, others are not', async ({ page }) => {
+  await page.route('**/api/runs', (route) =>
+    route.fulfill({
+      json: [
+        {
+          activityId: 4, name: 'Hill Run', sportType: 'Run', startedAt: '2026-10-16T18:00:00Z',
+          elapsedSeconds: 1800,
+          songs: [
+            { name: 'Plain', artists: ['Artist A'], albumArtUrl: null, playedAt: '2026-10-16T18:04:00Z', offsetSeconds: 0, isTopSpeed: false, isFastestPace: false },
+            { name: 'Sprinter', artists: ['Artist B'], albumArtUrl: null, playedAt: '2026-10-16T18:08:00Z', offsetSeconds: 240, isTopSpeed: true, isFastestPace: false },
+            { name: 'Steady', artists: ['Artist C'], albumArtUrl: null, playedAt: '2026-10-16T18:12:00Z', offsetSeconds: 480, isTopSpeed: false, isFastestPace: true },
+            { name: 'Both', artists: ['Artist D'], albumArtUrl: null, playedAt: '2026-10-16T18:16:00Z', offsetSeconds: 720, isTopSpeed: true, isFastestPace: true },
+          ],
+        },
+      ],
+    }),
+  );
+  await page.goto('./');
+
+  const songs = page.getByRole('region', { name: 'Runs' }).locator('ol > li');
+  await expect(songs).toHaveCount(4);
+  await expect(songs.nth(0)).not.toContainText('top speed');
+  await expect(songs.nth(0)).not.toContainText('fastest pace');
+  await expect(songs.nth(1)).toContainText('⚡ top speed');
+  await expect(songs.nth(1)).not.toContainText('fastest pace');
+  await expect(songs.nth(2)).toContainText('fastest pace');
+  await expect(songs.nth(2)).not.toContainText('top speed');
+  await expect(songs.nth(3)).toContainText('⚡ top speed');
+  await expect(songs.nth(3)).toContainText('fastest pace');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('region', { name: 'Runs' }).screenshot({ path: 'e2e/screenshots/runs-highlights-phone.png', animations: 'disabled' });
+});
+
 test('BEH-SYNC-4: home page explains an empty run list', async ({ page }) => {
   await page.goto('./');
 

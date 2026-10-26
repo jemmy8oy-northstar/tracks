@@ -72,6 +72,12 @@ namespace Balenthiran.Tracks.Database.Migrations
                         .IsRequired()
                         .HasColumnType("text[]");
 
+                    b.Property<bool>("IsFastestPace")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsTopSpeed")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");

@@ -1,4 +1,5 @@
 using Balenthiran.Tracks.Abstractions.DataModels;
+using Balenthiran.Tracks.Abstractions.Exceptions;
 using Balenthiran.Tracks.Abstractions.Services;
 using Balenthiran.Tracks.DataModels.Models;
 using Balenthiran.Tracks.Services;
@@ -12,7 +13,7 @@ public class RunSyncProcessorTests
 
     private static readonly DateTimeOffset Start = new(2026, 10, 17, 9, 0, 0, TimeSpan.Zero);
 
-    private sealed class FakeStrava(StravaActivity activity) : IStravaClient
+    private sealed class FakeStrava(StravaActivity activity, ActivityStreams? streams = null, bool streamsFail = false) : IStravaClient
     {
         public List<Guid> Users { get; } = [];
 
@@ -21,6 +22,11 @@ public class RunSyncProcessorTests
             Users.Add(userId);
             return Task.FromResult<IStravaActivity>(activity);
         }
+
+        public Task<IActivityStreams?> GetStreamsAsync(Guid userId, long activityId, CancellationToken cancellationToken = default) =>
+            streamsFail
+                ? throw new UpstreamServiceException("Strava streams request failed with status 429.")
+                : Task.FromResult<IActivityStreams?>(streams);
     }
 
     private sealed class FakeSpotify(params SpotifyPlay[] plays) : ISpotifyClient
@@ -54,7 +60,7 @@ public class RunSyncProcessorTests
     private static RunSyncProcessor Build(
         TestDb db, FakeStrava strava, FakeSpotify spotify, StravaSettings? stravaSettings = null, SpotifySettings? spotifySettings = null) =>
         new(stravaSettings ?? ConfiguredStrava, spotifySettings ?? ConfiguredSpotify, new UserService(db.Context()), strava, spotify,
-            new RunSongMatcher(), new RunStore(db.Context()), NullLogger<RunSyncProcessor>.Instance);
+            new RunSongMatcher(), new RunHighlights(), new RunStore(db.Context()), NullLogger<RunSyncProcessor>.Instance);
 
     private static async Task<IReadOnlyList<IRun>> RunsOf(TestDb db, Guid userId) => await new RunStore(db.Context()).GetAllAsync(userId);
 
@@ -88,6 +94,59 @@ public class RunSyncProcessorTests
         await Build(db, new FakeStrava(Activity()), new FakeSpotify()).ProcessAsync(Athlete, 55);
 
         Assert.Empty(Assert.Single(await RunsOf(db, user.Id)).Songs);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-HIGH-3")]
+    [Trait("Behaviour", "BEH-HIGH-4")]
+    public async Task Songs_stored_carry_the_highlights_picked_from_the_streams()
+    {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
+        // "early" plays 4:00-8:00 into the run (running at 3 m/s); "late" plays 16:00-20:00 (at 4 m/s, so
+        // it has both the top speed and the fastest pace).
+        double[] time = [.. Enumerable.Range(0, 1801).Select(s => (double)s)];
+        double[] velocity = [.. time.Select(s => s is >= 960 and <= 1200 ? 4.0 : 3.0)];
+        var distance = new double[time.Length];
+        for (var i = 1; i < time.Length; i++)
+            distance[i] = distance[i - 1] + velocity[i];
+        var streams = new ActivityStreams { TimeSeconds = time, DistanceMetres = distance, VelocityMetresPerSecond = velocity };
+
+        await Build(db, new FakeStrava(Activity(), streams), new FakeSpotify(Play("late", 20), Play("early", 8))).ProcessAsync(Athlete, 55);
+
+        var songs = Assert.Single(await RunsOf(db, user.Id)).Songs;
+        Assert.Equal(["early", "late"], songs.Select(s => s.Name));
+        Assert.Equal([false, true], songs.Select(s => s.IsTopSpeed));
+        Assert.Equal([false, true], songs.Select(s => s.IsFastestPace));
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-HIGH-3")]
+    public async Task A_run_whose_streams_cannot_be_read_is_still_stored_without_highlights()
+    {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
+
+        await Build(db, new FakeStrava(Activity(), streamsFail: true), new FakeSpotify(Play("early", 8))).ProcessAsync(Athlete, 55);
+
+        var song = Assert.Single(Assert.Single(await RunsOf(db, user.Id)).Songs);
+        Assert.Equal("early", song.Name);
+        Assert.False(song.IsTopSpeed);
+        Assert.False(song.IsFastestPace);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-HIGH-3")]
+    public async Task A_run_with_no_GPS_names_no_song()
+    {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
+
+        await Build(db, new FakeStrava(Activity(), streams: null), new FakeSpotify(Play("early", 8))).ProcessAsync(Athlete, 55);
+
+        var song = Assert.Single(Assert.Single(await RunsOf(db, user.Id)).Songs);
+        Assert.False(song.IsTopSpeed);
+        Assert.False(song.IsFastestPace);
     }
 
     [Theory]

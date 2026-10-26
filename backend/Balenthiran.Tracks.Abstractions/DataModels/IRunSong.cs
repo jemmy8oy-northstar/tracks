@@ -11,4 +11,10 @@ public interface IRunSong
 
     /// <summary>Seconds from the run's start to when the song started; negative if it began before the run.</summary>
     int OffsetSeconds { get; }
+
+    /// <summary>The song playing at the run's top speed (BEH-HIGH-3). False for a run with no GPS.</summary>
+    bool IsTopSpeed { get; }
+
+    /// <summary>The song with the fastest average pace over the run (BEH-HIGH-4). False for a run with no GPS.</summary>
+    bool IsFastestPace { get; }
 }

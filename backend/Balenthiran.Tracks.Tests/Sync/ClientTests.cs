@@ -62,6 +62,42 @@ public class ClientTests
     }
 
     [Fact]
+    [Trait("Behaviour", "BEH-HIGH-3")]
+    public async Task Strava_client_reads_the_time_distance_and_velocity_streams()
+    {
+        var handler = new FakeHttpMessageHandler().Reply(
+            """{"time":{"data":[0,1,2]},"distance":{"data":[0.0,3.1,6.4]},"velocity_smooth":{"data":[3,3.1,3.3]}}""");
+        var client = new StravaClient(new HttpClient(handler), new StubTokenProvider());
+
+        var streams = await client.GetStreamsAsync(User, 55);
+
+        Assert.NotNull(streams);
+        Assert.Equal([0, 1, 2], streams.TimeSeconds);
+        Assert.Equal([0.0, 3.1, 6.4], streams.DistanceMetres);
+        Assert.Equal([3, 3.1, 3.3], streams.VelocityMetresPerSecond);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal(
+            "https://www.strava.com/api/v3/activities/55/streams?keys=time,distance,velocity_smooth&key_by_type=true",
+            request.RequestUri!.ToString());
+        Assert.Equal("Bearer", request.Headers.Authorization!.Scheme);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-HIGH-3")]
+    public async Task Strava_client_gives_no_streams_for_an_activity_without_GPS()
+    {
+        var handler = new FakeHttpMessageHandler()
+            .Reply("{}", HttpStatusCode.NotFound)
+            .Reply("""{"time":{"data":[0,1,2]}}""")
+            .Reply("{}", HttpStatusCode.TooManyRequests);
+        var client = new StravaClient(new HttpClient(handler), new StubTokenProvider());
+
+        Assert.Null(await client.GetStreamsAsync(User, 1));
+        Assert.Null(await client.GetStreamsAsync(User, 1));
+        await Assert.ThrowsAsync<UpstreamServiceException>(() => client.GetStreamsAsync(User, 1));
+    }
+
+    [Fact]
     public async Task Spotify_client_reads_plays_asking_for_the_most_recent_fifty_after_the_run_start()
     {
         var handler = new FakeHttpMessageHandler().Reply(PlaysJson);

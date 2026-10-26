@@ -20,4 +20,8 @@ public class RunSongEntity
     public DateTimeOffset PlayedTo { get; set; }
 
     public int OffsetSeconds { get; set; }
+
+    public bool IsTopSpeed { get; set; }
+
+    public bool IsFastestPace { get; set; }
 }
