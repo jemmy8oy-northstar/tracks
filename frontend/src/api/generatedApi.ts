@@ -143,6 +143,7 @@ export type RunSongResponse = {
   offsetSeconds: number | string;
   isTopSpeed: boolean;
   isFastestPace: boolean;
+  routeIndex: null | number | string;
 };
 export type RunResponse = {
   activityId: number | string;
@@ -153,6 +154,7 @@ export type RunResponse = {
   songs: RunSongResponse[];
   contextType: null | string;
   contextName: null | string;
+  route: (number | string)[][];
 };
 export const {
   useGetStatusQuery,

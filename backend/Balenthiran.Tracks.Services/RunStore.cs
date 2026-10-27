@@ -7,8 +7,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Balenthiran.Tracks.Services;
 
-public class RunStore(AppDbContext db) : IRunStore
+public class RunStore(AppDbContext db, TimeProvider? clock = null) : IRunStore
 {
+    private DateTimeOffset Now => (clock ?? TimeProvider.System).GetUtcNow();
+
     public async Task<bool> SaveAsync(Guid userId, IRun run, CancellationToken cancellationToken = default)
     {
         if (await db.Runs.AnyAsync(r => r.UserId == userId && r.ActivityId == run.ActivityId, cancellationToken))
@@ -25,6 +27,8 @@ public class RunStore(AppDbContext db) : IRunStore
             ElapsedSeconds = run.ElapsedSeconds,
             ContextType = run.ContextType,
             ContextName = run.ContextName,
+            Route = RunRoute.Encode(run.Route),
+            StreamsReadAt = run.StreamsRead ? Now : null,
             Songs = run.Songs.Select((song, position) => new RunSongEntity
             {
                 Id = Guid.NewGuid(),
@@ -51,8 +55,45 @@ public class RunStore(AppDbContext db) : IRunStore
             .OrderByDescending(r => r.StartedAt)
             .ToListAsync(cancellationToken);
 
-        return runs.Select(r => (IRun)new Run
+        return runs.Select(ToRun).ToList();
+    }
+
+    public async Task<IReadOnlyList<(Guid UserId, IRun Run)>> GetUnreadStreamsAsync(
+        int limit, IReadOnlyCollection<long> skip, CancellationToken cancellationToken = default)
+    {
+        var runs = await db.Runs.AsNoTracking()
+            .Where(r => r.StreamsReadAt == null && !skip.Contains(r.ActivityId))
+            .Include(r => r.Songs)
+            .OrderByDescending(r => r.StartedAt)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return runs.Select(r => (r.UserId, ToRun(r))).ToList();
+    }
+
+    public async Task SaveStreamsAsync(
+        Guid userId, long activityId, IReadOnlyList<IRunSong> songs, IReadOnlyList<IRoutePoint> route, CancellationToken cancellationToken = default)
+    {
+        var run = await db.Runs.Include(r => r.Songs)
+            .SingleOrDefaultAsync(r => r.UserId == userId && r.ActivityId == activityId, cancellationToken);
+        if (run is null)
+            return;
+
+        // Songs are matched by position: the backfill reads them in play order and changes only the flags.
+        var ordered = run.Songs.OrderBy(s => s.Position).ToList();
+        for (var i = 0; i < ordered.Count && i < songs.Count; i++)
         {
+            ordered[i].IsTopSpeed = songs[i].IsTopSpeed;
+            ordered[i].IsFastestPace = songs[i].IsFastestPace;
+        }
+
+        run.Route = RunRoute.Encode(route);
+        run.StreamsReadAt = Now;
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static IRun ToRun(RunEntity r) => new Run
+    {
             ActivityId = r.ActivityId,
             Name = r.Name,
             SportType = r.SportType,
@@ -60,6 +101,8 @@ public class RunStore(AppDbContext db) : IRunStore
             ElapsedSeconds = r.ElapsedSeconds,
             ContextType = r.ContextType,
             ContextName = r.ContextName,
+            Route = RunRoute.Decode(r.Route),
+            StreamsRead = r.StreamsReadAt is not null,
             Songs = r.Songs.OrderBy(s => s.Position).Select(s => (IRunSong)new RunSong
             {
                 Name = s.Name,
@@ -71,6 +114,5 @@ public class RunStore(AppDbContext db) : IRunStore
                 IsTopSpeed = s.IsTopSpeed,
                 IsFastestPace = s.IsFastestPace,
             }).ToList(),
-        }).ToList();
-    }
+    };
 }

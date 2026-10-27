@@ -239,6 +239,73 @@ public class RunSyncProcessorTests
         Assert.False(song.IsFastestPace);
     }
 
+    private static ActivityStreams StreamsWithRoute(int seconds) => new()
+    {
+        TimeSeconds = [.. Enumerable.Range(0, seconds + 1).Select(s => (double)s)],
+        DistanceMetres = [.. Enumerable.Range(0, seconds + 1).Select(s => s * 3.0)],
+        VelocityMetresPerSecond = [.. Enumerable.Range(0, seconds + 1).Select(_ => 3.0)],
+        LatLng = [.. Enumerable.Range(0, seconds + 1).Select(s => (IReadOnlyList<double>)[51.5 + (s * 0.00001), -0.1])],
+    };
+
+    [Fact]
+    [Trait("Behaviour", "BEH-MAP-2")]
+    [Trait("Behaviour", "BEH-SYNC-6")]
+    public async Task A_run_is_stored_with_its_route_and_marked_as_read()
+    {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
+
+        await Build(db, new FakeStrava(Activity(), StreamsWithRoute(1800)), new FakeSpotify(Play("early", 8))).ProcessAsync(Athlete, 55);
+
+        var run = Assert.Single(await RunsOf(db, user.Id));
+        Assert.Equal(RunRoute.MaxPoints, run.Route.Count);
+        Assert.Equal(0, run.Route[0].Seconds);
+        Assert.Equal(1800, run.Route[^1].Seconds);
+        Assert.True(run.StreamsRead);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-MAP-2")]
+    public async Task A_run_with_no_songs_still_keeps_its_route()
+    {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
+
+        await Build(db, new FakeStrava(Activity(), StreamsWithRoute(600)), new FakeSpotify()).ProcessAsync(Athlete, 55);
+
+        var run = Assert.Single(await RunsOf(db, user.Id));
+        Assert.Empty(run.Songs);
+        Assert.NotEmpty(run.Route);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-SYNC-6")]
+    public async Task A_run_whose_streams_cannot_be_read_is_left_for_the_backfill()
+    {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
+
+        await Build(db, new FakeStrava(Activity(), streamsFail: true), new FakeSpotify(Play("early", 8))).ProcessAsync(Athlete, 55);
+
+        var run = Assert.Single(await RunsOf(db, user.Id));
+        Assert.Empty(run.Route);
+        Assert.False(run.StreamsRead);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-MAP-3")]
+    public async Task A_run_with_no_GPS_is_read_once_and_has_no_route()
+    {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete);
+
+        await Build(db, new FakeStrava(Activity(), streams: null), new FakeSpotify(Play("early", 8))).ProcessAsync(Athlete, 55);
+
+        var run = Assert.Single(await RunsOf(db, user.Id));
+        Assert.Empty(run.Route);
+        Assert.True(run.StreamsRead);
+    }
+
     [Theory]
     [InlineData("Ride")]
     [InlineData("Swim")]

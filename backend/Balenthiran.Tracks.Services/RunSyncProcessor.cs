@@ -49,7 +49,8 @@ public class RunSyncProcessor(
         var plays = await spotify.GetRecentlyPlayedAsync(user.Id, activity.StartDate, cancellationToken);
         var songs = matcher.Match(activity.StartDate, TimeSpan.FromSeconds(activity.ElapsedTimeSeconds), plays);
         var context = await ContextOfAsync(user.Id, activity.Id, songs, cancellationToken);
-        songs = await WithHighlightsAsync(user.Id, activity, songs, cancellationToken);
+        var (withPicks, route, streamsRead) = await WithStreamsAsync(user.Id, activity.Id, activity.ElapsedTimeSeconds, songs, cancellationToken);
+        songs = withPicks;
 
         await store.SaveAsync(user.Id, new Run
         {
@@ -61,6 +62,8 @@ public class RunSyncProcessor(
             Songs = songs,
             ContextType = context.Type,
             ContextName = context.Name,
+            Route = route,
+            StreamsRead = streamsRead,
         }, cancellationToken);
         logger.LogInformation("Stored run {ActivityId} with {SongCount} songs.", activityId, songs.Count);
     }
@@ -85,36 +88,21 @@ public class RunSyncProcessor(
         }
     }
 
-    // Highlights are a bonus: the streams being unavailable (no GPS, rate limit, Strava down) must
-    // never cost the run itself, which can only be paired with Spotify's recent plays right now.
-    private async Task<IReadOnlyList<IRunSong>> WithHighlightsAsync(
-        Guid userId, IStravaActivity activity, IReadOnlyList<IRunSong> songs, CancellationToken cancellationToken)
+    // Highlights and the route are a bonus: the streams being unavailable (rate limit, Strava down)
+    // must never cost the run itself, which can only be paired with Spotify's recent plays right now.
+    // Unread streams leave StreamsRead false, so the backfill tries again later (BEH-SYNC-6).
+    private async Task<(IReadOnlyList<IRunSong> Songs, IReadOnlyList<IRoutePoint> Route, bool StreamsRead)> WithStreamsAsync(
+        Guid userId, long activityId, int elapsedSeconds, IReadOnlyList<IRunSong> songs, CancellationToken cancellationToken)
     {
-        if (songs.Count == 0)
-            return songs;
-
-        IRunHighlightPicks picks;
         try
         {
-            var streams = await strava.GetStreamsAsync(userId, activity.Id, cancellationToken);
-            picks = highlights.Pick(songs, activity.ElapsedTimeSeconds, streams);
+            var streams = await strava.GetStreamsAsync(userId, activityId, cancellationToken);
+            return (RunRoute.WithPicks(songs, highlights.Pick(songs, elapsedSeconds, streams)), RunRoute.FromStreams(streams), true);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogWarning(ex, "Storing activity {ActivityId} without highlights: its streams could not be read.", activity.Id);
-            return songs;
+            logger.LogWarning(ex, "Storing activity {ActivityId} without highlights or route: its streams could not be read.", activityId);
+            return (songs, [], false);
         }
-
-        return songs.Select((song, index) => (IRunSong)new RunSong
-        {
-            Name = song.Name,
-            Artists = song.Artists,
-            AlbumArtUrl = song.AlbumArtUrl,
-            PlayedFrom = song.PlayedFrom,
-            PlayedTo = song.PlayedTo,
-            OffsetSeconds = song.OffsetSeconds,
-            IsTopSpeed = picks.TopSpeedIndex == index,
-            IsFastestPace = picks.FastestPaceIndex == index,
-        }).ToList();
     }
 }

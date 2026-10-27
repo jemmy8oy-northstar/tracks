@@ -1,0 +1,42 @@
+.route-map {
+  margin: var(--space-3) 0;
+}
+
+.route-map svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.route-map__line {
+  fill: none;
+  stroke: var(--accent-primary);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.8;
+}
+
+.route-map__start {
+  fill: var(--success);
+  stroke: var(--bg-page);
+  stroke-width: 2;
+}
+
+.route-map__pin rect {
+  fill: var(--accent-primary);
+  stroke: var(--text-primary);
+  stroke-width: 1.5;
+}
+
+.route-map__pin text {
+  fill: var(--text-primary);
+  stroke: var(--bg-page);
+  stroke-width: 3;
+  paint-order: stroke;
+  font-family: var(--font-main);
+  font-size: 12px;
+  font-weight: var(--weight-bold);
+  pointer-events: none;
+}

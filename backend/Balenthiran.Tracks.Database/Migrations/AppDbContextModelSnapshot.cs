@@ -45,11 +45,17 @@ namespace Balenthiran.Tracks.Database.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Route")
+                        .HasColumnType("text");
+
                     b.Property<string>("SportType")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("StreamsReadAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")
