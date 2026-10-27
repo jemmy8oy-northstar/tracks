@@ -147,6 +147,52 @@ test('BEH-HIGH-3 / BEH-HIGH-4: the top-speed and fastest-pace songs are labelled
   await page.getByRole('region', { name: 'Runs' }).screenshot({ path: 'e2e/screenshots/runs-highlights-phone.png', animations: 'disabled' });
 });
 
+// A 5k-ish loop in a park, as [lat, lng]: the shape the API sends after thinning (BEH-MAP-2).
+const loop = Array.from({ length: 120 }, (_, i) => {
+  const t = (i / 119) * 2 * Math.PI;
+  return [51.5045 + 0.006 * Math.sin(t) + 0.0015 * Math.sin(3 * t), -0.1605 + 0.011 * Math.cos(t)];
+});
+const cover = (colour: string) =>
+  `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="${colour}"/></svg>`)}`;
+
+test('BEH-MAP-1 / BEH-MAP-2 / BEH-MAP-3: a run draws its route with each song pinned where it started; a run without GPS draws none', async ({ page }) => {
+  await page.route('**/api/runs', (route) =>
+    route.fulfill({
+      json: [
+        {
+          activityId: 5, name: 'Park Loop', sportType: 'Run', startedAt: '2026-10-27T07:00:00Z',
+          elapsedSeconds: 1680, contextType: 'playlist', contextName: 'Morning Miles', route: loop,
+          songs: [
+            { name: 'Opener', artists: ['Artist A'], albumArtUrl: cover('#e11d48'), playedAt: '2026-10-27T07:04:00Z', offsetSeconds: 0, isTopSpeed: false, isFastestPace: false, routeIndex: 0 },
+            { name: 'Sprinter', artists: ['Artist B'], albumArtUrl: cover('#f59e0b'), playedAt: '2026-10-27T07:08:00Z', offsetSeconds: 240, isTopSpeed: true, isFastestPace: false, routeIndex: 17 },
+            { name: 'Steady', artists: ['Artist C'], albumArtUrl: null, playedAt: '2026-10-27T07:12:00Z', offsetSeconds: 480, isTopSpeed: false, isFastestPace: true, routeIndex: 34 },
+            { name: 'Closer', artists: ['Artist D'], albumArtUrl: cover('#10b981'), playedAt: '2026-10-27T07:16:00Z', offsetSeconds: 720, isTopSpeed: false, isFastestPace: false, routeIndex: 51 },
+          ],
+        },
+        {
+          activityId: 6, name: 'Treadmill', sportType: 'Run', startedAt: '2026-10-26T07:00:00Z',
+          elapsedSeconds: 1200, contextType: null, contextName: null, route: [],
+          songs: [
+            { name: 'Indoor', artists: ['Artist E'], albumArtUrl: null, playedAt: '2026-10-26T07:04:00Z', offsetSeconds: 0, isTopSpeed: false, isFastestPace: false, routeIndex: null },
+          ],
+        },
+      ],
+    }),
+  );
+  await page.goto('./');
+
+  const runs = page.getByRole('region', { name: 'Runs' }).locator('ul > li');
+  await expect(runs).toHaveCount(2);
+  await expect(runs.nth(0).getByTestId('route-map')).toBeVisible();
+  await expect(runs.nth(0).getByTestId('song-pin')).toHaveCount(4);
+  await expect(runs.nth(0).getByRole('img', { name: 'Route with 4 songs pinned' })).toBeVisible();
+  await expect(runs.nth(1).getByTestId('route-map')).toHaveCount(0);
+  await expect(runs.nth(1)).toContainText('Indoor');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await runs.nth(0).screenshot({ path: 'e2e/screenshots/runs-map-phone.png', animations: 'disabled' });
+});
+
 test('BEH-HIGH-2: a run names the album or playlist it ran to, or says a type, mixed, or nothing', async ({ page }) => {
   const song = { name: 'Song', artists: ['Artist A'], albumArtUrl: null, playedAt: '2026-10-16T18:04:00Z', offsetSeconds: 0, isTopSpeed: false, isFastestPace: false };
   const run = (activityId: number, name: string, songs: object[], contextType: string | null, contextName: string | null) => ({

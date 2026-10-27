@@ -1,5 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 import Hero from '../components/Hero';
+import RouteMap from '../components/RouteMap';
 import { Badge, Button } from '../components/ui';
 import { apiHref } from '../api/emptyApi';
 import { useGetMeQuery, useGetRunsQuery, useDisconnectSpotifyMutation, useSignOutMutation } from '../api/generatedApi';
@@ -53,6 +54,17 @@ const Runs = () => {
                 {/* BEH-HIGH-2: what most of the songs came from; nothing for a run with no songs or one synced before this existed. */}
                 {run.songs.length > 0 && run.contextType && (
                   <p style={{ fontSize: '0.9rem' }}>{contextLine(run.contextType, run.contextName)}</p>
+                )}
+                {/* BEH-MAP-1/2: the route with each song pinned where it started; none for a run without GPS (BEH-MAP-3). */}
+                {(run.route ?? []).length > 1 && (
+                  <RouteMap
+                    route={run.route.map((point) => point.map(Number))}
+                    songs={run.songs.map((song) => ({
+                      name: song.name,
+                      albumArtUrl: song.albumArtUrl,
+                      routeIndex: song.routeIndex == null ? null : Number(song.routeIndex),
+                    }))}
+                  />
                 )}
                 {run.songs.length === 0 ? (
                   <p style={{ color: 'var(--text-secondary)' }}>No songs found for this run.</p>

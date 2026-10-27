@@ -187,6 +187,41 @@ public class StravaWebhookApiTests
         Assert.Equal("bob's", Assert.Single(bobsRuns!).Name);
     }
 
+    [Fact]
+    [Trait("Behaviour", "BEH-MAP-1")]
+    [Trait("Behaviour", "BEH-MAP-2")]
+    public async Task A_run_comes_back_with_its_route_and_each_song_pinned_to_the_point_nearest_its_start()
+    {
+        using var factory = new SyncApiFactory();
+        var ann = factory.Browser();
+        await SignIn.WithStravaAsync(factory, ann, Athlete);
+        var start = new DateTimeOffset(2026, 10, 16, 9, 0, 0, TimeSpan.Zero);
+        RunSong SongAt(string name, int offset) => new()
+        {
+            Name = name, Artists = ["A"], PlayedFrom = start.AddSeconds(offset), PlayedTo = start.AddSeconds(offset + 240), OffsetSeconds = offset,
+        };
+        await Save(factory, Athlete, new Run
+        {
+            ActivityId = 1, Name = "with GPS", StartedAt = start, ElapsedSeconds = 600, StreamsRead = true,
+            Route = [new RoutePoint(51.50, -0.10, 0), new RoutePoint(51.51, -0.11, 300), new RoutePoint(51.52, -0.12, 600)],
+            Songs = [SongAt("first", 10), SongAt("second", 420)],
+        });
+        await Save(factory, Athlete, new Run
+        {
+            ActivityId = 2, Name = "treadmill", StartedAt = start.AddDays(-1), ElapsedSeconds = 600, StreamsRead = true,
+            Songs = [SongAt("indoor", 10)],
+        });
+
+        var runs = await ann.GetFromJsonAsync<List<RunResponse>>("/api/runs", Web);
+
+        var outdoor = runs!.Single(r => r.Name == "with GPS");
+        Assert.Equal([[51.50, -0.10], [51.51, -0.11], [51.52, -0.12]], outdoor.Route);
+        Assert.Equal([0, 1], outdoor.Songs.Select(s => s.RouteIndex));
+        var indoor = runs!.Single(r => r.Name == "treadmill");
+        Assert.Empty(indoor.Route);
+        Assert.Null(Assert.Single(indoor.Songs).RouteIndex);
+    }
+
     private static async Task Save(SyncApiFactory factory, long athleteId, Run run)
     {
         await factory.WithDb(async db =>
