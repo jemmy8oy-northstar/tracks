@@ -44,6 +44,53 @@ public static class RunRoute
         return best;
     }
 
+    /// <summary>
+    /// The distance covered along the route between two moments of the run, in metres (BEH-MAP-1); null
+    /// without a route or when the window misses it. Each end is interpolated between the points around it.
+    /// </summary>
+    public static double? DistanceMetres(IReadOnlyList<IRoutePoint> route, double fromSeconds, double toSeconds)
+    {
+        if (route.Count < 2)
+            return null;
+
+        var from = Math.Max(fromSeconds, route[0].Seconds);
+        var to = Math.Min(toSeconds, route[^1].Seconds);
+        if (to <= from)
+            return null;
+
+        return DistanceAt(route, to) - DistanceAt(route, from);
+    }
+
+    /// <summary>Cumulative distance from the start of the route to a moment, interpolated in time within its segment.</summary>
+    private static double DistanceAt(IReadOnlyList<IRoutePoint> route, double seconds)
+    {
+        var total = 0d;
+        for (var i = 1; i < route.Count; i++)
+        {
+            var segment = Haversine(route[i - 1], route[i]);
+            if (route[i].Seconds >= seconds)
+            {
+                var span = route[i].Seconds - route[i - 1].Seconds;
+                return total + (span <= 0 ? 0 : segment * (seconds - route[i - 1].Seconds) / span);
+            }
+
+            total += segment;
+        }
+
+        return total;
+    }
+
+    private static double Haversine(IRoutePoint a, IRoutePoint b)
+    {
+        const double earthRadiusMetres = 6_371_000;
+        static double Radians(double degrees) => degrees * Math.PI / 180;
+        var dLat = Radians(b.Lat - a.Lat);
+        var dLng = Radians(b.Lng - a.Lng);
+        var h = Math.Pow(Math.Sin(dLat / 2), 2)
+            + Math.Cos(Radians(a.Lat)) * Math.Cos(Radians(b.Lat)) * Math.Pow(Math.Sin(dLng / 2), 2);
+        return 2 * earthRadiusMetres * Math.Asin(Math.Min(1, Math.Sqrt(h)));
+    }
+
     public static string? Encode(IReadOnlyList<IRoutePoint> route) =>
         route.Count == 0 ? null : JsonSerializer.Serialize(route.Select(p => new[] { p.Lat, p.Lng, p.Seconds }));
 

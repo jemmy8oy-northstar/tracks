@@ -28,7 +28,8 @@ public static class RunsRoutes
             run.ElapsedSeconds,
             run.Songs.Select(song => new RunSongResponse(
                 song.Name, song.Artists, song.AlbumArtUrl, song.PlayedTo, song.OffsetSeconds,
-                song.IsTopSpeed, song.IsFastestPace, RunRoute.NearestIndex(run.Route, song.OffsetSeconds))).ToList(),
+                song.IsTopSpeed, song.IsFastestPace, RunRoute.NearestIndex(run.Route, song.OffsetSeconds),
+                RunRoute.DistanceMetres(run.Route, song.OffsetSeconds, song.OffsetSeconds + (song.PlayedTo - song.PlayedFrom).TotalSeconds))).ToList(),
             run.ContextType,
             run.ContextName,
             run.Route.Select(p => new[] { p.Lat, p.Lng }).ToList()));

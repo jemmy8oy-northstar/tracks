@@ -363,7 +363,8 @@
           "offsetSeconds",
           "isTopSpeed",
           "isFastestPace",
-          "routeIndex"
+          "routeIndex",
+          "distanceMetres"
         ],
         "type": "object",
         "properties": {
@@ -408,6 +409,15 @@
               "string"
             ],
             "format": "int32"
+          },
+          "distanceMetres": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },

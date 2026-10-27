@@ -163,17 +163,17 @@ test('BEH-MAP-1 / BEH-MAP-2 / BEH-MAP-3: a run draws its route with each song pi
           activityId: 5, name: 'Park Loop', sportType: 'Run', startedAt: '2026-10-27T07:00:00Z',
           elapsedSeconds: 1680, contextType: 'playlist', contextName: 'Morning Miles', route: loop,
           songs: [
-            { name: 'Opener', artists: ['Artist A'], albumArtUrl: cover('#e11d48'), playedAt: '2026-10-27T07:04:00Z', offsetSeconds: 0, isTopSpeed: false, isFastestPace: false, routeIndex: 0 },
-            { name: 'Sprinter', artists: ['Artist B'], albumArtUrl: cover('#f59e0b'), playedAt: '2026-10-27T07:08:00Z', offsetSeconds: 240, isTopSpeed: true, isFastestPace: false, routeIndex: 17 },
-            { name: 'Steady', artists: ['Artist C'], albumArtUrl: null, playedAt: '2026-10-27T07:12:00Z', offsetSeconds: 480, isTopSpeed: false, isFastestPace: true, routeIndex: 34 },
-            { name: 'Closer', artists: ['Artist D'], albumArtUrl: cover('#10b981'), playedAt: '2026-10-27T07:16:00Z', offsetSeconds: 720, isTopSpeed: false, isFastestPace: false, routeIndex: 51 },
+            { name: 'Opener', artists: ['Artist A'], albumArtUrl: cover('#e11d48'), playedAt: '2026-10-27T07:04:00Z', offsetSeconds: 0, isTopSpeed: false, isFastestPace: false, routeIndex: 0, distanceMetres: 640 },
+            { name: 'Sprinter', artists: ['Artist B'], albumArtUrl: cover('#f59e0b'), playedAt: '2026-10-27T07:08:00Z', offsetSeconds: 240, isTopSpeed: true, isFastestPace: false, routeIndex: 17, distanceMetres: 1240 },
+            { name: 'Steady', artists: ['Artist C'], albumArtUrl: null, playedAt: '2026-10-27T07:12:00Z', offsetSeconds: 480, isTopSpeed: false, isFastestPace: true, routeIndex: 34, distanceMetres: 1012 },
+            { name: 'Closer', artists: ['Artist D'], albumArtUrl: cover('#10b981'), playedAt: '2026-10-27T07:16:00Z', offsetSeconds: 720, isTopSpeed: false, isFastestPace: false, routeIndex: 51, distanceMetres: 980 },
           ],
         },
         {
           activityId: 6, name: 'Treadmill', sportType: 'Run', startedAt: '2026-10-26T07:00:00Z',
           elapsedSeconds: 1200, contextType: null, contextName: null, route: [],
           songs: [
-            { name: 'Indoor', artists: ['Artist E'], albumArtUrl: null, playedAt: '2026-10-26T07:04:00Z', offsetSeconds: 0, isTopSpeed: false, isFastestPace: false, routeIndex: null },
+            { name: 'Indoor', artists: ['Artist E'], albumArtUrl: null, playedAt: '2026-10-26T07:04:00Z', offsetSeconds: 0, isTopSpeed: false, isFastestPace: false, routeIndex: null, distanceMetres: null },
           ],
         },
       ],
@@ -188,6 +188,11 @@ test('BEH-MAP-1 / BEH-MAP-2 / BEH-MAP-3: a run draws its route with each song pi
   await expect(runs.nth(0).getByRole('img', { name: 'Route with 4 songs pinned' })).toBeVisible();
   await expect(runs.nth(1).getByTestId('route-map')).toHaveCount(0);
   await expect(runs.nth(1)).toContainText('Indoor');
+  // BEH-MAP-1: how far each song went, in metres under a kilometre; nothing without a route.
+  const songs = runs.nth(0).locator('ol > li');
+  await expect(songs.nth(0)).toContainText('· 640 m');
+  await expect(songs.nth(1)).toContainText('· 1.2 km');
+  await expect(runs.nth(1).locator('ol > li')).not.toContainText(/\d m|km/);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await runs.nth(0).screenshot({ path: 'e2e/screenshots/runs-map-phone.png', animations: 'disabled' });
