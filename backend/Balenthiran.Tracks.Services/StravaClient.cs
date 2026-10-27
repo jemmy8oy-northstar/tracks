@@ -38,7 +38,7 @@ public class StravaClient(HttpClient http, IStravaTokenProvider tokens) : IStrav
     {
         using var response = await GetAsync(
             userId,
-            $"https://www.strava.com/api/v3/activities/{activityId}/streams?keys=time,distance,velocity_smooth&key_by_type=true",
+            $"https://www.strava.com/api/v3/activities/{activityId}/streams?keys=time,distance,velocity_smooth,latlng&key_by_type=true",
             cancellationToken);
 
         // An activity with no GPS (a treadmill run, a manual entry) has no streams to give.
@@ -59,8 +59,19 @@ public class StravaClient(HttpClient http, IStravaTokenProvider tokens) : IStrav
             TimeSeconds = time,
             DistanceMetres = distance,
             VelocityMetresPerSecond = Stream(root, "velocity_smooth") ?? [],
+            LatLng = LatLngStream(root),
         };
     }
+
+    // latlng is the one stream whose samples are pairs, [lat, lng]; anything else in it is dropped whole.
+    private static IReadOnlyList<IReadOnlyList<double>> LatLngStream(JsonElement root) =>
+        root.TryGetProperty("latlng", out var stream)
+        && stream.ValueKind == JsonValueKind.Object
+        && stream.TryGetProperty("data", out var data)
+        && data.ValueKind == JsonValueKind.Array
+        && data.EnumerateArray().All(p => p.ValueKind == JsonValueKind.Array && p.GetArrayLength() == 2)
+            ? data.EnumerateArray().Select(p => (IReadOnlyList<double>)[p[0].GetDouble(), p[1].GetDouble()]).ToList()
+            : [];
 
     private static List<double>? Stream(JsonElement root, string key) =>
         root.ValueKind == JsonValueKind.Object

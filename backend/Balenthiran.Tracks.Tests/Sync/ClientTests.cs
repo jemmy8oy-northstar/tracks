@@ -66,7 +66,7 @@ public class ClientTests
     public async Task Strava_client_reads_the_time_distance_and_velocity_streams()
     {
         var handler = new FakeHttpMessageHandler().Reply(
-            """{"time":{"data":[0,1,2]},"distance":{"data":[0.0,3.1,6.4]},"velocity_smooth":{"data":[3,3.1,3.3]}}""");
+            """{"time":{"data":[0,1,2]},"distance":{"data":[0.0,3.1,6.4]},"velocity_smooth":{"data":[3,3.1,3.3]},"latlng":{"data":[[51.5,-0.1],[51.6,-0.2],[51.7,-0.3]]}}""");
         var client = new StravaClient(new HttpClient(handler), new StubTokenProvider());
 
         var streams = await client.GetStreamsAsync(User, 55);
@@ -75,9 +75,10 @@ public class ClientTests
         Assert.Equal([0, 1, 2], streams.TimeSeconds);
         Assert.Equal([0.0, 3.1, 6.4], streams.DistanceMetres);
         Assert.Equal([3, 3.1, 3.3], streams.VelocityMetresPerSecond);
+        Assert.Equal([[51.5, -0.1], [51.6, -0.2], [51.7, -0.3]], streams.LatLng.Select(p => p.ToArray()));
         var request = Assert.Single(handler.Requests);
         Assert.Equal(
-            "https://www.strava.com/api/v3/activities/55/streams?keys=time,distance,velocity_smooth&key_by_type=true",
+            "https://www.strava.com/api/v3/activities/55/streams?keys=time,distance,velocity_smooth,latlng&key_by_type=true",
             request.RequestUri!.ToString());
         Assert.Equal("Bearer", request.Headers.Authorization!.Scheme);
     }
@@ -95,6 +96,22 @@ public class ClientTests
         Assert.Null(await client.GetStreamsAsync(User, 1));
         Assert.Null(await client.GetStreamsAsync(User, 1));
         await Assert.ThrowsAsync<UpstreamServiceException>(() => client.GetStreamsAsync(User, 1));
+    }
+
+    [Theory]
+    [Trait("Behaviour", "BEH-MAP-3")]
+    [InlineData("""{"time":{"data":[0,1]},"distance":{"data":[0,3]}}""")]
+    [InlineData("""{"time":{"data":[0,1]},"distance":{"data":[0,3]},"latlng":{"data":[[51.5,-0.1],[51.6]]}}""")]
+    [InlineData("""{"time":{"data":[0,1]},"distance":{"data":[0,3]},"latlng":{"data":"nope"}}""")]
+    public async Task Strava_client_gives_no_coordinates_when_the_latlng_stream_is_missing_or_malformed(string body)
+    {
+        var client = new StravaClient(new HttpClient(new FakeHttpMessageHandler().Reply(body)), new StubTokenProvider());
+
+        var streams = await client.GetStreamsAsync(User, 1);
+
+        Assert.NotNull(streams);
+        Assert.Empty(streams.LatLng);
+        Assert.Equal([0, 1], streams.TimeSeconds);
     }
 
     [Fact]

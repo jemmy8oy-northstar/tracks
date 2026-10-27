@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Balenthiran.Tracks.Abstractions.Services;
 using Balenthiran.Tracks.DataModels.Models;
+using Balenthiran.Tracks.Services;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Balenthiran.Tracks.WebApi.Routes;
@@ -27,9 +28,10 @@ public static class RunsRoutes
             run.ElapsedSeconds,
             run.Songs.Select(song => new RunSongResponse(
                 song.Name, song.Artists, song.AlbumArtUrl, song.PlayedTo, song.OffsetSeconds,
-                song.IsTopSpeed, song.IsFastestPace)).ToList(),
+                song.IsTopSpeed, song.IsFastestPace, RunRoute.NearestIndex(run.Route, song.OffsetSeconds))).ToList(),
             run.ContextType,
-            run.ContextName));
+            run.ContextName,
+            run.Route.Select(p => new[] { p.Lat, p.Lng }).ToList()));
 
         return TypedResults.Ok(runs.ToList());
     }

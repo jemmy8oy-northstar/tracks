@@ -12,4 +12,6 @@ public class Run : IRun
     public IReadOnlyList<IRunSong> Songs { get; set; } = [];
     public string? ContextType { get; set; }
     public string? ContextName { get; set; }
+    public IReadOnlyList<IRoutePoint> Route { get; set; } = [];
+    public bool StreamsRead { get; set; }
 }

@@ -11,4 +11,7 @@ public interface IActivityStreams
 
     /// <summary>Strava's smoothed speed in metres per second; empty when Strava sent none.</summary>
     IReadOnlyList<double> VelocityMetresPerSecond { get; }
+
+    /// <summary>Each sample's [latitude, longitude] (BEH-MAP-2); empty when Strava sent none, e.g. a watch run with no GPS.</summary>
+    IReadOnlyList<IReadOnlyList<double>> LatLng { get; }
 }

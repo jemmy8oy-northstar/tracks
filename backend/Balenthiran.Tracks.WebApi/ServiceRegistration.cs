@@ -61,6 +61,8 @@ public static class ServiceRegistration
         services.AddScoped<IRunSyncProcessor, RunSyncProcessor>();
         services.AddScoped<IStravaWebhookService, StravaWebhookService>();
         services.AddHostedService<RunSyncWorker>();
+        services.AddScoped<IRunStreamsBackfill, RunStreamsBackfill>();
+        services.AddHostedService<RunStreamsBackfillWorker>();
         services.AddSingleton<IStravaSubscriptionService>(sp => new StravaSubscriptionService(
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<IStravaSettings>(),
             sp.GetRequiredService<IConfiguration>()["PublicBaseUrl"], sp.GetRequiredService<ILogger<StravaSubscriptionService>>()));
