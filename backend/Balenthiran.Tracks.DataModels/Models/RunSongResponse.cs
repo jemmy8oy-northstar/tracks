@@ -1,6 +1,7 @@
 namespace Balenthiran.Tracks.DataModels.Models;
 
 /// <summary>JSON shape of one song in GET /api/runs.</summary>
+/// <param name="RouteIndex">The route point the song's pin sits on, the one nearest its start (BEH-MAP-2); null when the run has no route.</param>
 public sealed record RunSongResponse(
     string Name,
     IReadOnlyList<string> Artists,
@@ -8,4 +9,5 @@ public sealed record RunSongResponse(
     DateTimeOffset PlayedAt,
     int OffsetSeconds,
     bool IsTopSpeed,
-    bool IsFastestPace);
+    bool IsFastestPace,
+    int? RouteIndex);

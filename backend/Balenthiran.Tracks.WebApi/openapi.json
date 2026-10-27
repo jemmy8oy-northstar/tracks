@@ -289,7 +289,8 @@
           "elapsedSeconds",
           "songs",
           "contextType",
-          "contextName"
+          "contextName",
+          "route"
         ],
         "type": "object",
         "properties": {
@@ -336,6 +337,20 @@
               "null",
               "string"
             ]
+          },
+          "route": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+                "type": [
+                  "number",
+                  "string"
+                ],
+                "format": "double"
+              }
+            }
           }
         }
       },
@@ -347,7 +362,8 @@
           "playedAt",
           "offsetSeconds",
           "isTopSpeed",
-          "isFastestPace"
+          "isFastestPace",
+          "routeIndex"
         ],
         "type": "object",
         "properties": {
@@ -383,6 +399,15 @@
           },
           "isFastestPace": {
             "type": "boolean"
+          },
+          "routeIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
