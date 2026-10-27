@@ -77,6 +77,30 @@ public class RunRouteTests
         Assert.Null(RunRoute.Encode([]));
     }
 
+    // Due north along a meridian: 0.001 degrees of latitude is 111.195 m, covered in 100 s.
+    private static readonly IReadOnlyList<IRoutePoint> North =
+        [new RoutePoint(51.500, -0.1, 0), new RoutePoint(51.501, -0.1, 100), new RoutePoint(51.502, -0.1, 200)];
+
+    [Theory]
+    [Trait("Behaviour", "BEH-MAP-1")]
+    [InlineData(0, 200, 222.39)]
+    [InlineData(50, 150, 111.19)] // each end is interpolated inside its segment
+    [InlineData(-60, 100, 111.19)] // a song already playing at the start counts from the start
+    [InlineData(150, 9999, 55.60)] // and one still playing at the end stops there
+    public void A_song_covers_the_distance_along_the_route_while_it_played(double from, double to, double expected)
+    {
+        Assert.Equal(expected, RunRoute.DistanceMetres(North, from, to)!.Value, 1);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-MAP-3")]
+    public void A_song_off_the_route_or_with_no_route_has_no_distance()
+    {
+        Assert.Null(RunRoute.DistanceMetres([], 0, 100));
+        Assert.Null(RunRoute.DistanceMetres(North, 300, 400));
+        Assert.Null(RunRoute.DistanceMetres(North, -100, -10));
+    }
+
     [Theory]
     [Trait("Behaviour", "BEH-MAP-3")]
     [InlineData(null)]

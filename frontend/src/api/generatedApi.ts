@@ -144,6 +144,7 @@ export type RunSongResponse = {
   isTopSpeed: boolean;
   isFastestPace: boolean;
   routeIndex: null | number | string;
+  distanceMetres: null | number | string;
 };
 export type RunResponse = {
   activityId: number | string;
