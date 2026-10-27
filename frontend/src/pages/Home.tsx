@@ -14,6 +14,10 @@ const formatDuration = (seconds: number | string) => {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
 };
 
+// "1.2 km", or "450 m" under a kilometre.
+const formatDistance = (metres: number) =>
+  metres < 1000 ? `${Math.round(metres)} m` : `${(metres / 1000).toFixed(1)} km`;
+
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -77,6 +81,10 @@ const Runs = () => {
                           {formatDuration(Math.max(0, Number(song.offsetSeconds)))}
                         </span>{' '}
                         {song.name} <span style={{ color: 'var(--text-secondary)' }}>· {song.artists.join(', ')}</span>
+                        {/* BEH-MAP-1: how far the runner went during the song; nothing for a run without a route. */}
+                        {song.distanceMetres != null && (
+                          <span style={{ color: 'var(--text-secondary)' }}> · {formatDistance(Number(song.distanceMetres))}</span>
+                        )}
                         {/* BEH-HIGH-3 / BEH-HIGH-4: the song at the run's top speed, and the one with the fastest average pace. */}
                         {song.isTopSpeed && (
                           <Badge variant="accent" style={{ marginLeft: '8px' }}>⚡ top speed</Badge>
