@@ -83,7 +83,7 @@ public class RunSyncProcessorTests
     private static RunSyncProcessor Build(
         TestDb db, FakeStrava strava, FakeSpotify spotify, StravaSettings? stravaSettings = null, SpotifySettings? spotifySettings = null) =>
         new(stravaSettings ?? ConfiguredStrava, spotifySettings ?? ConfiguredSpotify, new UserService(db.Context()), strava, spotify,
-            new RunSongMatcher(), new RunHighlights(), new RunStore(db.Context()), NullLogger<RunSyncProcessor>.Instance);
+            new RunSongMatcher(), new RunContextNamer(spotify, NullLogger<RunContextNamer>.Instance), new RunHighlights(), new RunStore(db.Context()), NullLogger<RunSyncProcessor>.Instance);
 
     private static async Task<IReadOnlyList<IRun>> RunsOf(TestDb db, Guid userId) => await new RunStore(db.Context()).GetAllAsync(userId);
 

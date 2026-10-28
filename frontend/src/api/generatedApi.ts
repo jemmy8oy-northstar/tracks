@@ -81,6 +81,13 @@ const injectedRtkApi = api.injectEndpoints({
     getRuns: build.query<GetRunsApiResponse, GetRunsApiArg>({
       query: () => ({ url: `/api/runs` }),
     }),
+    uploadRun: build.mutation<UploadRunApiResponse, UploadRunApiArg>({
+      query: (queryArg) => ({
+        url: `/api/runs/upload`,
+        method: "POST",
+        body: queryArg.body,
+      }),
+    }),
   }),
   overrideExisting: false,
 });
@@ -124,6 +131,12 @@ export type ReceiveStravaWebhookEventApiArg = {
 };
 export type GetRunsApiResponse = /** status 200 OK */ RunResponse[];
 export type GetRunsApiArg = void;
+export type UploadRunApiResponse = /** status 200 OK */ RunResponse;
+export type UploadRunApiArg = {
+  body: {
+    file: IFormFile;
+  };
+};
 export type MeResponse = {
   athleteId: number | string;
   spotifyConnected: boolean;
@@ -157,6 +170,7 @@ export type RunResponse = {
   contextName: null | string;
   route: (number | string)[][];
 };
+export type IFormFile = Blob;
 export const {
   useGetStatusQuery,
   useStartStravaSignInQuery,
@@ -169,4 +183,5 @@ export const {
   useVerifyStravaWebhookQuery,
   useReceiveStravaWebhookEventMutation,
   useGetRunsQuery,
+  useUploadRunMutation,
 } = injectedRtkApi;
