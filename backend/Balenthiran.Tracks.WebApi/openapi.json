@@ -256,10 +256,52 @@
           }
         }
       }
+    },
+    "/api/runs/upload": {
+      "post": {
+        "tags": [
+          "RunsRoutes"
+        ],
+        "operationId": "UploadRun",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "file"
+                ],
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "$ref": "#/components/schemas/IFormFile"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "IFormFile": {
+        "type": "string",
+        "format": "binary"
+      },
       "MeResponse": {
         "required": [
           "athleteId",
