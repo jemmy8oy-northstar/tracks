@@ -235,3 +235,47 @@ test('BEH-SYNC-4: home page explains an empty run list', async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByText('after the next one finishes on Strava', { exact: false })).toBeVisible();
 });
+
+test('BEH-SYNC-7: an Upload run button sends the chosen Garmin file and the run appears in Runs', async ({ page }) => {
+  let uploaded = false;
+  let sent = '';
+  await page.route('**/api/runs', (route) =>
+    route.fulfill({
+      json: uploaded
+        ? [{
+            activityId: -1792227600, name: 'Garmin run', sportType: 'Run', startedAt: '2026-10-17T09:00:00Z', elapsedSeconds: 1200,
+            songs: [{ name: 'Early', artists: ['A'], albumArtUrl: null, playedAt: '2026-10-17T09:08:00Z', offsetSeconds: 240 }],
+          }]
+        : [],
+    }),
+  );
+  await page.route('**/api/runs/upload', (route) => {
+    uploaded = true;
+    sent = route.request().postData() ?? '';
+    return route.fulfill({ json: {} });
+  });
+  await page.goto('./');
+
+  const runs = page.getByRole('region', { name: 'Runs' });
+  await expect(runs.getByRole('button', { name: 'Upload run' })).toBeVisible();
+  await runs.getByLabel('Garmin FIT file').setInputFiles({
+    name: 'ACTIVITY.zip', mimeType: 'application/zip', buffer: Buffer.from('PK-not-really'),
+  });
+
+  await expect(runs.getByRole('heading', { name: 'Garmin run' })).toBeVisible();
+  await expect(runs.getByText('Early')).toBeVisible();
+  expect(sent).toContain('name="file"; filename="ACTIVITY.zip"');
+});
+
+test('BEH-SYNC-7: a file Tracks cannot read says why and adds no run', async ({ page }) => {
+  await page.route('**/api/runs/upload', (route) =>
+    route.fulfill({ status: 400, json: { title: 'Invalid request', detail: 'That is not a readable FIT file.' } }),
+  );
+  await page.goto('./');
+
+  const runs = page.getByRole('region', { name: 'Runs' });
+  await runs.getByLabel('Garmin FIT file').setInputFiles({ name: 'notes.fit', mimeType: 'application/octet-stream', buffer: Buffer.from('hello') });
+
+  await expect(runs.getByRole('alert')).toHaveText('That is not a readable FIT file.');
+  await expect(runs.getByText('No runs yet', { exact: false })).toBeVisible();
+});

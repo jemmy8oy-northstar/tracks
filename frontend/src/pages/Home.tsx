@@ -1,9 +1,10 @@
+import { useRef, type ChangeEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Hero from '../components/Hero';
 import RouteMap from '../components/RouteMap';
 import { Badge, Button } from '../components/ui';
 import { apiHref } from '../api/emptyApi';
-import { useGetMeQuery, useGetRunsQuery, useDisconnectSpotifyMutation, useSignOutMutation } from '../api/generatedApi';
+import { useGetMeQuery, useGetRunsQuery, useDisconnectSpotifyMutation, useSignOutMutation, useUploadRunMutation } from '../api/generatedApi';
 
 // The API sends int64 values as number | string, so coerce before formatting.
 const formatDuration = (seconds: number | string) => {
@@ -32,14 +33,50 @@ const contextLine = (type: string, name: string | null) => {
 const linkButton = 'ui-button ui-button--primary ui-button--lg';
 const note = { color: 'var(--text-secondary)', maxWidth: '480px', margin: '16px auto 0', fontSize: '0.95rem' } as const;
 
+// The API's problem details carry the reason in `detail` ("That is not a readable FIT file."); anything else gets a generic line.
+const uploadError = (error: unknown) => {
+  const detail = (error as { data?: { detail?: unknown } } | undefined)?.data?.detail;
+  return typeof detail === 'string' ? detail : 'Could not add that run. Please try again.';
+};
+
+// BEH-SYNC-7: a Garmin run comes in as the file Garmin Connect gives from an activity's "Export Original" (.fit, or the .zip around it).
+const UploadRun = ({ onUploaded }: { onUploaded: () => void }) => {
+  const [upload, { isLoading, error }] = useUploadRunMutation();
+  const picker = useRef<HTMLInputElement>(null);
+
+  const onPick = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = ''; // so picking the same file again still fires
+    if (!file) return;
+    const form = new FormData();
+    form.append('file', file);
+    // The generated type says `{ file: Blob }`, but a multipart body has to go as FormData or it is sent as JSON.
+    void upload({ body: form as unknown as { file: Blob } }).unwrap().then(onUploaded, () => undefined);
+  };
+
+  return (
+    <div style={{ marginBottom: '16px' }}>
+      <input ref={picker} type="file" accept=".fit,.zip" hidden aria-label="Garmin FIT file" onChange={onPick} />
+      <Button variant="secondary" size="sm" loading={isLoading} onClick={() => picker.current?.click()}>
+        Upload run
+      </Button>
+      <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '8px' }}>
+        From Garmin Connect, open an activity and choose Export Original. Songs come from Spotify's last 50 plays.
+      </p>
+      {error && <p role="alert" style={{ color: '#f87171', fontSize: '0.9rem', marginTop: '8px' }}>{uploadError(error)}</p>}
+    </div>
+  );
+};
+
 // Only mounted when signed in, so a signed-out 401 from /api/runs is never fetched or shown.
 const Runs = () => {
-  const { data: runs, isLoading, isError } = useGetRunsQuery(undefined, { refetchOnMountOrArgChange: true });
+  const { data: runs, isLoading, isError, refetch } = useGetRunsQuery(undefined, { refetchOnMountOrArgChange: true });
 
   return (
     <section className="container" id="runs" aria-label="Runs" style={{ paddingTop: '80px' }}>
       <div className="glass" style={{ padding: '32px', maxWidth: '640px', margin: '0 auto' }}>
         <h2 style={{ marginBottom: '16px', fontSize: '1.25rem' }}>Runs</h2>
+        <UploadRun onUploaded={refetch} />
         {isLoading && <p style={{ color: 'var(--text-secondary)' }}>Loading runs...</p>}
         {isError && <p style={{ color: '#f87171' }}>Could not reach the API. Is the backend running?</p>}
         {runs?.length === 0 && (
