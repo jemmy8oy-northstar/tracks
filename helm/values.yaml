@@ -16,7 +16,7 @@ apps:
   - name: backend
     image:
       repository: lhr.ocir.io/lr7uc6l49odc/tracks-backend # Update at scaffold time
-      tag: 0.1.17
+      tag: 0.1.19
       pullPolicy: Always
     containerPort: 8080
     replicas: 1
@@ -72,7 +72,7 @@ apps:
   - name: frontend
     image:
       repository: lhr.ocir.io/lr7uc6l49odc/tracks-frontend # Update at scaffold time
-      tag: 0.1.17
+      tag: 0.1.19
       pullPolicy: Always
     containerPort: 80
     replicas: 1
