@@ -2,6 +2,7 @@ import { useRef, type ChangeEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Hero from '../components/Hero';
 import RouteMap from '../components/RouteMap';
+import ShareCard from '../components/ShareCard';
 import { Badge, Button } from '../components/ui';
 import { apiHref } from '../api/emptyApi';
 import { useGetMeQuery, useGetRunsQuery, useDisconnectSpotifyMutation, useSignOutMutation, useUploadRunMutation } from '../api/generatedApi';
@@ -100,6 +101,18 @@ const Runs = () => {
                 {(run.route ?? []).length > 1 && (
                   <RouteMap
                     route={run.route.map((point) => point.map(Number))}
+                    songs={run.songs.map((song) => ({
+                      name: song.name,
+                      albumArtUrl: song.albumArtUrl,
+                      routeIndex: song.routeIndex == null ? null : Number(song.routeIndex),
+                    }))}
+                  />
+                )}
+                {/* BEH-SHARE-1: only a run with songs can be shared as a card. */}
+                {run.songs.length > 0 && (
+                  <ShareCard
+                    name={run.name}
+                    route={(run.route ?? []).map((point) => point.map(Number))}
                     songs={run.songs.map((song) => ({
                       name: song.name,
                       albumArtUrl: song.albumArtUrl,
