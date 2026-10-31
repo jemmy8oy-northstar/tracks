@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Balenthiran.Tracks.Abstractions.DataModels;
 using Balenthiran.Tracks.Abstractions.Exceptions;
@@ -30,7 +31,36 @@ public class StravaClient(HttpClient http, IStravaTokenProvider tokens) : IStrav
                     : root.TryGetProperty("type", out var type) ? type.GetString() : null) ?? string.Empty,
                 StartDate = root.GetProperty("start_date").GetDateTimeOffset(),
                 ElapsedTimeSeconds = root.GetProperty("elapsed_time").GetInt32(),
+                Description = root.TryGetProperty("description", out var description) && description.ValueKind == JsonValueKind.String
+                    ? description.GetString()
+                    : null,
             };
+        }
+    }
+
+    public async Task UpdateDescriptionAsync(Guid userId, long activityId, string description, CancellationToken cancellationToken = default)
+    {
+        var token = await tokens.GetAccessTokenAsync(userId, cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"https://www.strava.com/api/v3/activities/{activityId}")
+        {
+            Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) },
+            Content = JsonContent.Create(new { description }),
+        };
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await http.SendAsync(request, cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new UpstreamServiceException("Strava was unreachable.", ex);
+        }
+
+        using (response)
+        {
+            if (!response.IsSuccessStatusCode)
+                throw new UpstreamServiceException($"Strava description update failed with status {(int)response.StatusCode}.");
         }
     }
 

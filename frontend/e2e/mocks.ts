@@ -1,7 +1,14 @@
 import type { Page } from '@playwright/test';
 
 /** Who /api/me says is signed in. `null` = signed out (401). */
-export type Me = { athleteId: number; spotifyConnected: boolean } | null;
+export type Me = {
+  athleteId: number;
+  spotifyConnected: boolean;
+  /** BEH-SHARE-2: Strava granted activity:write. Absent = not granted. */
+  stravaWriteGranted?: boolean;
+  /** BEH-SHARE-2: the runner's opt-in. Absent = off. */
+  writeSongsToStravaDescription?: boolean;
+} | null;
 
 /**
  * Deterministic API mocks for the e2e suite.

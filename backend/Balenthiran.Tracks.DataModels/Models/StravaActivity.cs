@@ -9,4 +9,5 @@ public class StravaActivity : IStravaActivity
     public string SportType { get; set; } = string.Empty;
     public DateTimeOffset StartDate { get; set; }
     public int ElapsedTimeSeconds { get; set; }
+    public string? Description { get; set; }
 }

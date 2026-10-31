@@ -37,6 +37,8 @@ public static class AuthRoutes
         auth.MapDelete("/spotify", DisconnectSpotify).RequireAuthorization().WithName("DisconnectSpotify");
 
         parentGroup.MapGet("/me", GetMe).RequireAuthorization().WithName("GetMe");
+        // The cookie is SameSite=Lax, so a cross-site page cannot send it; JSON content type also forces a CORS preflight.
+        parentGroup.MapPut("/me/strava-description", SetStravaDescription).RequireAuthorization().WithName("SetStravaDescription");
 
         return parentGroup;
     }
@@ -111,7 +113,15 @@ public static class AuthRoutes
     private static async Task<Ok<MeResponse>> GetMe(ClaimsPrincipal principal, IUserService users, CancellationToken cancellationToken)
     {
         var user = await users.GetSignedInAsync(principal.UserId(), cancellationToken);
-        return TypedResults.Ok(new MeResponse(user.StravaAthleteId, user.SpotifyConnected));
+        return TypedResults.Ok(new MeResponse(user.StravaAthleteId, user.SpotifyConnected, user.StravaWriteGranted, user.WriteSongsToStravaDescription));
+    }
+
+    // BEH-SHARE-2. Turning it on without Strava's write grant is a 409 (the runner has to reconnect first); turning it off always works.
+    private static async Task<NoContent> SetStravaDescription(
+        StravaDescriptionRequest request, ClaimsPrincipal principal, IUserService users, CancellationToken cancellationToken)
+    {
+        await users.SetWriteSongsToStravaAsync(principal.UserId(), request.Enabled, cancellationToken);
+        return TypedResults.NoContent();
     }
 
     // The app's public root, which the OAuth providers send people back to. A configured PublicBaseUrl

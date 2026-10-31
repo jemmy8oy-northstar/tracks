@@ -42,6 +42,47 @@ public class ClientTests
     }
 
     [Fact]
+    [Trait("Behaviour", "BEH-SHARE-2")]
+    public async Task Strava_client_reads_the_description_and_treats_a_missing_or_null_one_as_none()
+    {
+        var handler = new FakeHttpMessageHandler()
+            .Reply("""{"name":"A","type":"Run","start_date":"2026-10-17T09:00:00Z","elapsed_time":60,"description":"Felt great"}""")
+            .Reply("""{"name":"A","type":"Run","start_date":"2026-10-17T09:00:00Z","elapsed_time":60,"description":null}""")
+            .Reply("""{"name":"A","type":"Run","start_date":"2026-10-17T09:00:00Z","elapsed_time":60}""");
+        var client = new StravaClient(new HttpClient(handler), new StubTokenProvider());
+
+        Assert.Equal("Felt great", (await client.GetActivityAsync(User, 1)).Description);
+        Assert.Null((await client.GetActivityAsync(User, 1)).Description);
+        Assert.Null((await client.GetActivityAsync(User, 1)).Description);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-SHARE-2")]
+    public async Task Strava_client_puts_the_description_to_the_activity_with_a_bearer_token()
+    {
+        var handler = new FakeHttpMessageHandler().Reply("{}");
+        var client = new StravaClient(new HttpClient(handler), new StubTokenProvider());
+
+        await client.UpdateDescriptionAsync(User, 55, "Line one\nLine two");
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Put, request.Method);
+        Assert.Equal("https://www.strava.com/api/v3/activities/55", request.RequestUri!.ToString());
+        Assert.Equal("Bearer", request.Headers.Authorization!.Scheme);
+        Assert.Equal("""{"description":"Line one\nLine two"}""", Assert.Single(handler.RequestBodies));
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-SHARE-2")]
+    public async Task Strava_client_maps_a_refused_description_update_to_upstream()
+    {
+        var handler = new FakeHttpMessageHandler().Reply("{}", HttpStatusCode.Forbidden);
+        var client = new StravaClient(new HttpClient(handler), new StubTokenProvider());
+
+        await Assert.ThrowsAsync<UpstreamServiceException>(() => client.UpdateDescriptionAsync(User, 55, "x"));
+    }
+
+    [Fact]
     public async Task Strava_client_falls_back_to_the_older_type_field()
     {
         var handler = new FakeHttpMessageHandler().Reply(
