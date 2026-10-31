@@ -52,6 +52,7 @@ public static class ServiceRegistration
             sp.GetRequiredService<ISpotifySettings>(), sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<IStravaClient>(sp => new StravaClient(
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<IStravaTokenProvider>()));
+        services.AddSingleton<IStravaDescriptionWriter, StravaDescriptionWriter>();
         services.AddSingleton<ISpotifyClient>(sp => new SpotifyClient(
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<ISpotifyTokenProvider>()));
         services.AddSingleton<IRunSongMatcher, RunSongMatcher>();

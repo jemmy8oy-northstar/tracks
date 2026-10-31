@@ -15,6 +15,7 @@ public class RunSyncProcessor(
     IRunContextNamer contextNamer,
     IRunHighlights highlights,
     IRunStore store,
+    IStravaDescriptionWriter descriptions,
     ILogger<RunSyncProcessor> logger) : IRunSyncProcessor
 {
     public async Task ProcessAsync(long athleteId, long activityId, CancellationToken cancellationToken = default)
@@ -67,6 +68,9 @@ public class RunSyncProcessor(
             StreamsRead = streamsRead,
         }, cancellationToken);
         logger.LogInformation("Stored run {ActivityId} with {SongCount} songs.", activityId, songs.Count);
+
+        // BEH-SHARE-2: after the run is safely kept; the writer swallows its own failures.
+        await descriptions.WriteAsync(user, activity, songs, cancellationToken);
     }
 
     // Highlights and the route are a bonus: the streams being unavailable (rate limit, Strava down)

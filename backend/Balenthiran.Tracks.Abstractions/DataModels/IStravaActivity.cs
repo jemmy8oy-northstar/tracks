@@ -8,4 +8,7 @@ public interface IStravaActivity
     string SportType { get; }
     DateTimeOffset StartDate { get; }
     int ElapsedTimeSeconds { get; }
+
+    /// <summary>What the runner wrote in the activity's description; null when empty.</summary>
+    string? Description { get; }
 }

@@ -12,7 +12,9 @@ public class AuthApiTests
 {
     private const long Athlete = 777;
 
-    private sealed record Me(long AthleteId, bool SpotifyConnected);
+    private sealed record Me(long AthleteId, bool SpotifyConnected, bool StravaWriteGranted = false, bool WriteSongsToStravaDescription = false);
+
+    private static readonly System.Text.Json.JsonSerializerOptions Web = new(System.Text.Json.JsonSerializerDefaults.Web);
 
     [Fact]
     public async Task Starting_sign_in_redirects_to_Strava_asking_for_activities_and_sets_a_state_cookie()
@@ -27,7 +29,7 @@ public class AuthApiTests
         Assert.Equal("https://www.strava.com/oauth/authorize", location.GetLeftPart(UriPartial.Path));
         var query = QueryHelpers.ParseQuery(location.Query);
         Assert.Equal("strava-id", query["client_id"]);
-        Assert.Equal("activity:read_all", query["scope"]);
+        Assert.Equal("activity:read_all,activity:write", query["scope"]); // BEH-SHARE-2: write is asked for too
         Assert.Equal("auto", query["approval_prompt"]);
         Assert.Equal("code", query["response_type"]);
         Assert.Equal("https://localhost/api/auth/strava/callback", query["redirect_uri"]);
@@ -137,6 +139,77 @@ public class AuthApiTests
 
         var me = await browser.GetFromJsonAsync<Me>("/api/me", new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
         Assert.Equal(new Me(Athlete, false), me);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-SHARE-2")]
+    public async Task A_runner_who_declined_the_write_permission_still_signs_in_and_me_says_to_reconnect()
+    {
+        using var factory = new SyncApiFactory();
+        var browser = factory.Browser();
+
+        var response = await SignIn.WithStravaAsync(factory, browser, Athlete); // read-only grant
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal(SignIn.GrantedScope, (await factory.WithDb(db => db.Users.SingleAsync())).StravaScope);
+        var me = await browser.GetFromJsonAsync<Me>("/api/me", Web);
+        Assert.False(me!.StravaWriteGranted);
+        Assert.False(me.WriteSongsToStravaDescription);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-SHARE-2")]
+    public async Task Reconnecting_with_the_write_permission_replaces_the_stored_scope_and_me_reports_the_grant()
+    {
+        using var factory = new SyncApiFactory();
+        var browser = factory.Browser();
+        await SignIn.WithStravaAsync(factory, browser, Athlete);
+
+        await SignIn.WithStravaAsync(factory, browser, Athlete, scope: SignIn.GrantedWithWriteScope);
+
+        Assert.Equal(SignIn.GrantedWithWriteScope, (await factory.WithDb(db => db.Users.SingleAsync())).StravaScope);
+        Assert.True((await browser.GetFromJsonAsync<Me>("/api/me", Web))!.StravaWriteGranted);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-SHARE-2")]
+    public async Task The_setting_needs_a_session()
+    {
+        using var factory = new SyncApiFactory();
+
+        var response = await factory.Browser().PutAsJsonAsync("/api/me/strava-description", new { enabled = true });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-SHARE-2")]
+    public async Task Turning_the_setting_on_without_the_write_permission_is_refused_and_stays_off()
+    {
+        using var factory = new SyncApiFactory();
+        var browser = factory.Browser();
+        await SignIn.WithStravaAsync(factory, browser, Athlete); // read-only grant
+
+        var response = await browser.PutAsJsonAsync("/api/me/strava-description", new { enabled = true });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.False((await factory.WithDb(db => db.Users.SingleAsync())).WriteSongsToStravaDescription);
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-SHARE-2")]
+    public async Task With_the_write_permission_the_setting_can_be_turned_on_and_off_and_me_reflects_it()
+    {
+        using var factory = new SyncApiFactory();
+        var browser = factory.Browser();
+        await SignIn.WithStravaAsync(factory, browser, Athlete, scope: SignIn.GrantedWithWriteScope);
+        Assert.False((await browser.GetFromJsonAsync<Me>("/api/me", Web))!.WriteSongsToStravaDescription); // off by default
+
+        Assert.Equal(HttpStatusCode.NoContent, (await browser.PutAsJsonAsync("/api/me/strava-description", new { enabled = true })).StatusCode);
+        Assert.True((await browser.GetFromJsonAsync<Me>("/api/me", Web))!.WriteSongsToStravaDescription);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await browser.PutAsJsonAsync("/api/me/strava-description", new { enabled = false })).StatusCode);
+        Assert.False((await browser.GetFromJsonAsync<Me>("/api/me", Web))!.WriteSongsToStravaDescription);
     }
 
     [Fact]

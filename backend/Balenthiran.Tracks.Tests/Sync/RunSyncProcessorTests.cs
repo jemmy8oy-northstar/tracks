@@ -27,6 +27,18 @@ public class RunSyncProcessorTests
             streamsFail
                 ? throw new UpstreamServiceException("Strava streams request failed with status 429.")
                 : Task.FromResult<IActivityStreams?>(streams);
+
+        public bool DescriptionFails { get; init; }
+
+        public List<string> Descriptions { get; } = [];
+
+        public Task UpdateDescriptionAsync(Guid userId, long activityId, string description, CancellationToken cancellationToken = default)
+        {
+            Descriptions.Add(description);
+            return DescriptionFails
+                ? throw new UpstreamServiceException("Strava description update failed with status 403.")
+                : Task.CompletedTask;
+        }
     }
 
     private sealed class FakeSpotify(params SpotifyPlay[] plays) : ISpotifyClient
@@ -83,7 +95,8 @@ public class RunSyncProcessorTests
     private static RunSyncProcessor Build(
         TestDb db, FakeStrava strava, FakeSpotify spotify, StravaSettings? stravaSettings = null, SpotifySettings? spotifySettings = null) =>
         new(stravaSettings ?? ConfiguredStrava, spotifySettings ?? ConfiguredSpotify, new UserService(db.Context()), strava, spotify,
-            new RunSongMatcher(), new RunContextNamer(spotify, NullLogger<RunContextNamer>.Instance), new RunHighlights(), new RunStore(db.Context()), NullLogger<RunSyncProcessor>.Instance);
+            new RunSongMatcher(), new RunContextNamer(spotify, NullLogger<RunContextNamer>.Instance), new RunHighlights(), new RunStore(db.Context()),
+            new StravaDescriptionWriter(strava, NullLogger<StravaDescriptionWriter>.Instance), NullLogger<RunSyncProcessor>.Instance);
 
     private static async Task<IReadOnlyList<IRun>> RunsOf(TestDb db, Guid userId) => await new RunStore(db.Context()).GetAllAsync(userId);
 
@@ -304,6 +317,49 @@ public class RunSyncProcessorTests
         var run = Assert.Single(await RunsOf(db, user.Id));
         Assert.Empty(run.Route);
         Assert.True(run.StreamsRead);
+    }
+
+    private const string WriteScope = "activity:read_all,activity:write";
+
+    [Fact]
+    [Trait("Behaviour", "BEH-SHARE-2")]
+    public async Task A_runner_who_opted_in_and_granted_write_has_the_songs_written_into_the_description_after_the_run_is_kept()
+    {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete, stravaScope: WriteScope, writeSongs: true);
+        var strava = new FakeStrava(Activity());
+
+        await Build(db, strava, new FakeSpotify(Play("early", 8))).ProcessAsync(Athlete, 55);
+
+        Assert.Equal(["early"], Assert.Single(await RunsOf(db, user.Id)).Songs.Select(s => s.Name));
+        Assert.Equal($"{StravaDescriptionWriter.BlockStart}\n1. early - A\n{StravaDescriptionWriter.BlockEnd}", Assert.Single(strava.Descriptions));
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-SHARE-2")]
+    public async Task A_Strava_error_writing_the_description_still_keeps_the_run_and_does_not_throw()
+    {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(Athlete, stravaScope: WriteScope, writeSongs: true);
+        var strava = new FakeStrava(Activity()) { DescriptionFails = true };
+
+        await Build(db, strava, new FakeSpotify(Play("early", 8))).ProcessAsync(Athlete, 55);
+
+        Assert.Single(strava.Descriptions); // it tried
+        Assert.Equal(["early"], Assert.Single(await RunsOf(db, user.Id)).Songs.Select(s => s.Name));
+    }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-SHARE-2")]
+    public async Task A_runner_who_did_not_opt_in_has_nothing_written_to_Strava()
+    {
+        using var db = new TestDb();
+        await db.AddUserAsync(Athlete, stravaScope: WriteScope, writeSongs: false);
+        var strava = new FakeStrava(Activity());
+
+        await Build(db, strava, new FakeSpotify(Play("early", 8))).ProcessAsync(Athlete, 55);
+
+        Assert.Empty(strava.Descriptions);
     }
 
     [Theory]

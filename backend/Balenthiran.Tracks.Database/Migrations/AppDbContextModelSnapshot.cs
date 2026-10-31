@@ -135,6 +135,12 @@ namespace Balenthiran.Tracks.Database.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("StravaScope")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("WriteSongsToStravaDescription")
+                        .HasColumnType("boolean");
+
                     b.HasKey("Id");
 
                     b.HasIndex("StravaAthleteId")

@@ -167,6 +167,29 @@
         }
       }
     },
+    "/api/me/strava-description": {
+      "put": {
+        "tags": [
+          "AuthRoutes"
+        ],
+        "operationId": "SetStravaDescription",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StravaDescriptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
     "/api/strava/webhook": {
       "get": {
         "tags": [
@@ -305,7 +328,9 @@
       "MeResponse": {
         "required": [
           "athleteId",
-          "spotifyConnected"
+          "spotifyConnected",
+          "stravaWriteGranted",
+          "writeSongsToStravaDescription"
         ],
         "type": "object",
         "properties": {
@@ -318,6 +343,12 @@
             "format": "int64"
           },
           "spotifyConnected": {
+            "type": "boolean"
+          },
+          "stravaWriteGranted": {
+            "type": "boolean"
+          },
+          "writeSongsToStravaDescription": {
             "type": "boolean"
           }
         }
@@ -460,6 +491,17 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "StravaDescriptionRequest": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
           }
         }
       },

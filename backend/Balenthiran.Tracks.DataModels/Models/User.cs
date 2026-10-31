@@ -7,4 +7,6 @@ public class User : IUser
     public Guid Id { get; set; }
     public long StravaAthleteId { get; set; }
     public bool SpotifyConnected { get; set; }
+    public bool StravaWriteGranted { get; set; }
+    public bool WriteSongsToStravaDescription { get; set; }
 }

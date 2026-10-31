@@ -21,6 +21,9 @@ public class RunStreamsBackfillTests
         public Task<IStravaActivity> GetActivityAsync(Guid userId, long activityId, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException("the backfill never re-reads the activity");
 
+        public Task UpdateDescriptionAsync(Guid userId, long activityId, string description, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("the backfill never writes to Strava");
+
         public Task<IActivityStreams?> GetStreamsAsync(Guid userId, long activityId, CancellationToken cancellationToken = default)
         {
             Asked.Add(activityId);
