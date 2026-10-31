@@ -5,7 +5,7 @@ import RouteMap from '../components/RouteMap';
 import ShareCard from '../components/ShareCard';
 import { Badge, Button } from '../components/ui';
 import { apiHref } from '../api/emptyApi';
-import { useGetMeQuery, useGetRunsQuery, useDisconnectSpotifyMutation, useSignOutMutation, useUploadRunMutation } from '../api/generatedApi';
+import { useGetMeQuery, useGetRunsQuery, useDisconnectSpotifyMutation, useSetStravaDescriptionMutation, useSignOutMutation, useUploadRunMutation } from '../api/generatedApi';
 
 // The API sends int64 values as number | string, so coerce before formatting.
 const formatDuration = (seconds: number | string) => {
@@ -155,6 +155,33 @@ const Runs = () => {
   );
 };
 
+// BEH-SHARE-2: opt-in, off by default. Without Strava's activity:write grant the box is disabled and the runner is
+// pointed at reconnecting Strava (the same sign-in link) instead of being allowed to switch on something that cannot work.
+const StravaDescriptionSetting = ({ writeGranted, enabled, onChanged }: { writeGranted: boolean; enabled: boolean; onChanged: () => void }) => {
+  const [setDescription, { isLoading, isError }] = useSetStravaDescriptionMutation();
+
+  return (
+    <div style={{ maxWidth: '480px', margin: '24px auto 0', textAlign: 'center' }}>
+      <label style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
+        <input
+          type="checkbox"
+          checked={writeGranted && enabled}
+          disabled={!writeGranted || isLoading}
+          onChange={(event) => void setDescription({ stravaDescriptionRequest: { enabled: event.target.checked } }).unwrap().then(onChanged, () => undefined)}
+        />
+        Add songs to my Strava activity description
+      </label>
+      {!writeGranted && (
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '8px' }}>
+          Tracks needs your permission to edit Strava activities to do this.{' '}
+          <a href={apiHref('api/auth/strava')}>Reconnect Strava</a> to turn it on.
+        </p>
+      )}
+      {isError && <p role="alert" style={{ color: '#f87171', fontSize: '0.85rem', marginTop: '8px' }}>Could not change that. Please try again.</p>}
+    </div>
+  );
+};
+
 const Account = ({ spotifyConnected, onChanged }: { spotifyConnected: boolean; onChanged: () => void }) => {
   const [signOut, { isLoading: signingOut }] = useSignOutMutation();
   const [disconnect, { isLoading: disconnecting }] = useDisconnectSpotifyMutation();
@@ -200,6 +227,7 @@ const Home = () => {
           )}
         </Hero>
         <Runs />
+        <StravaDescriptionSetting writeGranted={me.stravaWriteGranted} enabled={me.writeSongsToStravaDescription} onChanged={refetch} />
         <Account spotifyConnected={me.spotifyConnected} onChanged={refetch} />
       </>
     );
@@ -217,7 +245,7 @@ const Home = () => {
           <a className={linkButton} href={apiHref('api/auth/strava')}>
             <span className="ui-button__label">Sign in with Strava</span>
           </a>
-          <p style={note}>Tracks reads your runs from Strava and your listening from Spotify. Read-only.</p>
+          <p style={note}>Tracks reads your runs from Strava and your listening from Spotify. It only writes to Strava if you turn that on.</p>
         </div>
       )}
       {isLoading && <p style={note}>Loading...</p>}

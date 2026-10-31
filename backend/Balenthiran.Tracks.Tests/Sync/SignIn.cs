@@ -7,6 +7,9 @@ public static class SignIn
 {
     public const string GrantedScope = "read,activity:read_all";
 
+    /// <summary>What Strava reports when the runner left the activity:write box ticked too (BEH-SHARE-2).</summary>
+    public const string GrantedWithWriteScope = "read,activity:read_all,activity:write";
+
     /// <summary>The <c>state</c> the authorize redirect carries (the browser also keeps it in a cookie).</summary>
     public static async Task<string> StartStravaAsync(HttpClient browser)
     {

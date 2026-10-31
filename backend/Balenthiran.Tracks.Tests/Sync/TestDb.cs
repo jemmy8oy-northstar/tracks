@@ -23,7 +23,8 @@ public sealed class TestDb : IDisposable
     /// <summary>A new context over the same store; use a new one to read back what another wrote.</summary>
     public AppDbContext Context() => new(options);
 
-    public async Task<UserEntity> AddUserAsync(long athleteId, string stravaRefresh = "strava-0", string? spotifyRefresh = "spotify-0")
+    public async Task<UserEntity> AddUserAsync(
+        long athleteId, string stravaRefresh = "strava-0", string? spotifyRefresh = "spotify-0", string? stravaScope = null, bool writeSongs = false)
     {
         using var db = Context();
         var user = new UserEntity
@@ -32,6 +33,8 @@ public sealed class TestDb : IDisposable
             StravaAthleteId = athleteId,
             StravaRefreshToken = stravaRefresh,
             SpotifyRefreshToken = spotifyRefresh,
+            StravaScope = stravaScope,
+            WriteSongsToStravaDescription = writeSongs,
             CreatedAt = DateTimeOffset.UnixEpoch,
         };
         db.Users.Add(user);

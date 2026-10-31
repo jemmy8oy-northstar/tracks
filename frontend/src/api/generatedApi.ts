@@ -55,6 +55,16 @@ const injectedRtkApi = api.injectEndpoints({
     getMe: build.query<GetMeApiResponse, GetMeApiArg>({
       query: () => ({ url: `/api/me` }),
     }),
+    setStravaDescription: build.mutation<
+      SetStravaDescriptionApiResponse,
+      SetStravaDescriptionApiArg
+    >({
+      query: (queryArg) => ({
+        url: `/api/me/strava-description`,
+        method: "PUT",
+        body: queryArg.stravaDescriptionRequest,
+      }),
+    }),
     verifyStravaWebhook: build.query<
       VerifyStravaWebhookApiResponse,
       VerifyStravaWebhookApiArg
@@ -117,6 +127,10 @@ export type FinishSpotifyConnectApiArg = {
 };
 export type GetMeApiResponse = /** status 200 OK */ MeResponse;
 export type GetMeApiArg = void;
+export type SetStravaDescriptionApiResponse = unknown;
+export type SetStravaDescriptionApiArg = {
+  stravaDescriptionRequest: StravaDescriptionRequest;
+};
 export type VerifyStravaWebhookApiResponse = /** status 200 OK */ {
   [key: string]: string;
 };
@@ -140,6 +154,11 @@ export type UploadRunApiArg = {
 export type MeResponse = {
   athleteId: number | string;
   spotifyConnected: boolean;
+  stravaWriteGranted: boolean;
+  writeSongsToStravaDescription: boolean;
+};
+export type StravaDescriptionRequest = {
+  enabled: boolean;
 };
 export type StravaWebhookEvent = {
   object_type?: null | string;
@@ -180,6 +199,7 @@ export const {
   useDisconnectSpotifyMutation,
   useFinishSpotifyConnectQuery,
   useGetMeQuery,
+  useSetStravaDescriptionMutation,
   useVerifyStravaWebhookQuery,
   useReceiveStravaWebhookEventMutation,
   useGetRunsQuery,
