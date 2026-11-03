@@ -11,7 +11,7 @@ public class RunUploadServiceTests
 {
     private static readonly DateTimeOffset Start = FitFixture.Start;
 
-    private sealed class FakeSpotify(params SpotifyPlay[] plays) : ISpotifyClient
+    internal sealed class FakeSpotify(params SpotifyPlay[] plays) : ISpotifyClient
     {
         public DateTimeOffset? After { get; private set; }
 
@@ -25,7 +25,7 @@ public class RunUploadServiceTests
         }
     }
 
-    private static SpotifyPlay Play(string name, int endsAfterMinutes) => new()
+    internal static SpotifyPlay Play(string name, int endsAfterMinutes) => new()
     {
         TrackName = name,
         Artists = ["A"],
@@ -33,7 +33,7 @@ public class RunUploadServiceTests
         PlayedAt = Start.AddMinutes(endsAfterMinutes),
     };
 
-    private static RunUploadService Build(TestDb db, FakeSpotify spotify) =>
+    internal static RunUploadService Build(TestDb db, FakeSpotify spotify) =>
         new(new UserService(db.Context()), new FitFileReader(), spotify, new RunSongMatcher(),
             new RunContextNamer(spotify, NullLogger<RunContextNamer>.Instance), new RunHighlights(), new RunStore(db.Context()),
             NullLogger<RunUploadService>.Instance);
