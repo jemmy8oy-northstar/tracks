@@ -39,6 +39,8 @@ public static class ServiceRegistration
             sp.GetRequiredService<IConfiguration>().GetSection("Strava").Get<StravaSettings>() ?? new StravaSettings());
         services.AddSingleton<ISpotifySettings>(sp =>
             sp.GetRequiredService<IConfiguration>().GetSection("Spotify").Get<SpotifySettings>() ?? new SpotifySettings());
+        services.AddSingleton<IGarminSettings>(sp =>
+            sp.GetRequiredService<IConfiguration>().GetSection("Garmin").Get<GarminSettings>() ?? new GarminSettings());
         services.AddSingleton(TimeProvider.System);
         services.AddHttpClient();
         services.AddScoped<IUserService, UserService>();
@@ -55,12 +57,17 @@ public static class ServiceRegistration
         services.AddSingleton<IStravaDescriptionWriter, StravaDescriptionWriter>();
         services.AddSingleton<ISpotifyClient>(sp => new SpotifyClient(
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<ISpotifyTokenProvider>()));
+        services.AddSingleton<IGarminClient>(sp => new GarminClient(
+            sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<IGarminSettings>(),
+            sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<IRunSongMatcher, RunSongMatcher>();
         services.AddSingleton<IRunContextNamer, RunContextNamer>();
         services.AddSingleton<IRunHighlights, RunHighlights>();
         services.AddSingleton<IFitFileReader, FitFileReader>();
         services.AddScoped<IRunUploadService, RunUploadService>();
         services.AddScoped<IRunStore, RunStore>();
+        services.AddScoped<IGarminSyncService, GarminSyncService>();
+        services.AddHostedService<GarminSyncWorker>();
         services.AddSingleton<IRunSyncQueue, RunSyncQueue>();
         services.AddScoped<IRunSyncProcessor, RunSyncProcessor>();
         services.AddScoped<IStravaWebhookService, StravaWebhookService>();

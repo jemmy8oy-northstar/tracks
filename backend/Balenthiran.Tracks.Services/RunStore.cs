@@ -33,6 +33,12 @@ public class RunStore(AppDbContext db, TimeProvider? clock = null) : IRunStore
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<bool> ExistsAtAsync(Guid userId, DateTimeOffset startedAt, CancellationToken cancellationToken = default)
+    {
+        var at = startedAt.ToUniversalTime();
+        return await db.Runs.AnyAsync(r => r.UserId == userId && r.StartedAt == at, cancellationToken);
+    }
+
     private RunEntity ToEntity(Guid userId, IRun run) => new()
     {
         Id = Guid.NewGuid(),
