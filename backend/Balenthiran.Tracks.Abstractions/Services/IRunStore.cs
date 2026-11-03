@@ -10,6 +10,9 @@ public interface IRunStore
     /// <summary>Keeps the run for the user in place of any run of theirs that started at the same moment (BEH-SYNC-7), whatever it came from.</summary>
     Task ReplaceAsync(Guid userId, IRun run, CancellationToken cancellationToken = default);
 
+    /// <summary>Whether the user already keeps a run that started at that moment, whatever it came from (BEH-SYNC-8).</summary>
+    Task<bool> ExistsAtAsync(Guid userId, DateTimeOffset startedAt, CancellationToken cancellationToken = default);
+
     /// <summary>That user's runs, newest first, each with its songs in play order.</summary>
     Task<IReadOnlyList<IRun>> GetAllAsync(Guid userId, CancellationToken cancellationToken = default);
 

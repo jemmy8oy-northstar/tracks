@@ -18,12 +18,24 @@ public sealed class FakeHttpMessageHandler : HttpMessageHandler
         return this;
     }
 
+    /// <summary>A reply that is bytes, not text (a downloaded file).</summary>
+    public FakeHttpMessageHandler ReplyBytes(byte[] body, HttpStatusCode status = HttpStatusCode.OK)
+    {
+        binaryReplies[replies.Count] = body;
+        replies.Enqueue((status, string.Empty));
+        return this;
+    }
+
+    private readonly Dictionary<int, byte[]> binaryReplies = [];
+    private int served;
+
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         Requests.Add(request);
         RequestBodies.Add(request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken));
 
         var (status, body) = replies.Dequeue();
-        return new HttpResponseMessage(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
+        HttpContent content = binaryReplies.TryGetValue(served++, out var bytes) ? new ByteArrayContent(bytes) : new StringContent(body, Encoding.UTF8, "application/json");
+        return new HttpResponseMessage(status) { Content = content };
     }
 }

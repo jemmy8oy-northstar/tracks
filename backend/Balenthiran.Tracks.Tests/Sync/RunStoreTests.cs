@@ -24,6 +24,21 @@ public class RunStoreTests
     };
 
     [Fact]
+    [Trait("Behaviour", "BEH-SYNC-8")]
+    public async Task A_run_is_found_by_its_start_for_that_user_only()
+    {
+        using var db = new TestDb();
+        var user = await db.AddUserAsync(1);
+        var other = await db.AddUserAsync(2);
+        await new RunStore(db.Context()).SaveAsync(user.Id, RunAt(1, 8));
+
+        var store = new RunStore(db.Context());
+        Assert.True(await store.ExistsAtAsync(user.Id, new DateTimeOffset(2026, 10, 17, 10, 0, 0, TimeSpan.FromHours(2))));
+        Assert.False(await store.ExistsAtAsync(user.Id, new DateTimeOffset(2026, 10, 17, 9, 0, 0, TimeSpan.Zero)));
+        Assert.False(await store.ExistsAtAsync(other.Id, new DateTimeOffset(2026, 10, 17, 8, 0, 0, TimeSpan.Zero)));
+    }
+
+    [Fact]
     public async Task Runs_come_back_newest_first_whatever_order_they_were_saved_in()
     {
         using var db = new TestDb();
