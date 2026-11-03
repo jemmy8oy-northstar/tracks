@@ -191,4 +191,22 @@ public class GarminSyncTests
         Assert.Equal((1, 1), (result.Imported, result.Skipped));
         Assert.Equal(Start, Assert.Single(await RunsOf(db, user.Id)).StartedAt);
     }
+
+    [Fact]
+    [Trait("Behaviour", "BEH-SYNC-8")]
+    public async Task A_garmin_that_times_out_is_an_upstream_failure_not_a_cancellation()
+    {
+        // HttpClient reports its own timeout as a TaskCanceledException. Passed on as one, the worker would
+        // read it as shutdown, and a BackgroundService that throws stops the whole app.
+        var client = new GarminClient(new HttpClient(new TimesOut()), Configured(), new ManualTimeProvider(Now));
+
+        var failed = await Assert.ThrowsAsync<UpstreamServiceException>(() => client.SearchRunsAsync(new DateOnly(2026, 10, 15)));
+        Assert.Contains("did not answer in time", failed.Message, StringComparison.Ordinal);
+    }
+
+    private sealed class TimesOut : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            throw new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout");
+    }
 }

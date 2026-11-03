@@ -146,6 +146,11 @@ public class GarminClient(HttpClient http, IGarminSettings settings, TimeProvide
         {
             throw new UpstreamServiceException("Garmin was unreachable.", ex);
         }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            // HttpClient's own timeout: an upstream failure like any other, not a shutdown.
+            throw new UpstreamServiceException("Garmin did not answer in time.", ex);
+        }
     }
 
     /// <summary>The JWT's <c>exp</c> claim (unix seconds), or null if the token isn't a JWT or has none.</summary>

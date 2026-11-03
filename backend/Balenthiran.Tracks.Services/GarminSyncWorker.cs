@@ -27,7 +27,9 @@ public class GarminSyncWorker(IServiceScopeFactory scopes, IGarminSettings setti
                     using var scope = scopes.CreateScope();
                     await scope.ServiceProvider.GetRequiredService<IGarminSyncService>().SyncAsync(stoppingToken);
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                // Only shutdown ends the loop: anything else, a timeout's cancellation included, is one failed
+                // pass. A BackgroundService that throws stops the whole host by default.
+                catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
                 {
                     logger.LogError(ex, "The Garmin sync pass failed.");
                 }
