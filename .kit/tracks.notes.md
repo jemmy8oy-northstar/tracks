@@ -63,3 +63,9 @@ I thought we agreed yes add it
 <!-- from: note-button -->
 
 Could we walk users through using lastfm as a Spotify bridge in the onboarding process. I know it’s not that clean but lets us scale to more than 5.
+
+## 2026-11-25 07:47Z
+
+<!-- from: note-button -->
+
+Can we show the map for Garmin runs?
