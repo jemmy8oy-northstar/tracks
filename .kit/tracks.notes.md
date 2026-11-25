@@ -57,3 +57,9 @@ Would be more secure all in vault right or is that overkill?
 ## 2026-10-31 16:46Z · BEH-SHARE-2
 
 I thought we agreed yes add it
+
+## 2026-11-25 07:46Z
+
+<!-- from: note-button -->
+
+Could we walk users through using lastfm as a Spotify bridge in the onboarding process. I know it’s not that clean but lets us scale to more than 5.
