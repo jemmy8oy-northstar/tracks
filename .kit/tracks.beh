@@ -273,6 +273,25 @@ behaviour BEH-CONNECT-4 "When Strava is full, a new runner is told Tracks is ful
   contract my proposal: when Strava refuses, Tracks returns to the home page with "Tracks is full for now", not a raw error. An existing runner signing in again is unaffected, because they are already connected
   contract Spotify is the tighter gate, at 5 users before its own review (BEH-ACCOUNT-1), and nothing in Tracks words that refusal yet either
 
+behaviour BEH-CONNECT-5 "A runner without a Spotify slot is walked through connecting Last.fm instead"
+  in FEAT-CONNECT
+  layer ux
+  source defined tracks.notes.md#2026-11-25-0746
+  review unreviewed
+  pending
+  priority 3
+  actor runner
+  given runner:SignedInWithoutSpotify
+  when opens page:Home
+  then sees region:Runs
+  contract "Could we walk users through using lastfm as a Spotify bridge in the onboarding process. I know it's not that clean but lets us scale to more than 5."
+  contract my assumption: onboarding offers two ways to get songs, Connect Spotify (while a slot is free) or Use Last.fm. The Last.fm way has three steps: make a Last.fm account, switch on Spotify scrobbling in Last.fm's settings, then type the Last.fm username into Tracks
+  contract my assumption: Tracks reads the runner's scrobbles with Last.fm's public recent-tracks call, which needs only Tracks' own API key and the username, so the runner signs in to nothing new
+  contract a scrobble carries the time the song started, which is what placing it on the route needs (BEH-MAP-2). Last.fm keeps the history, so unlike Spotify's last 50 plays (BEH-SYNC-2) a run can get its songs late. Unreviewed: from Last.fm's API docs, not yet tried
+  contract the gap: Last.fm only counts a song once half of it (or 4 minutes) has played, so a skipped song is missing; and a private Last.fm profile can't be read. Cover art comes from Last.fm, not Spotify
+  contract this lifts Spotify's 5-user cap but not Strava's 10 connected athletes (BEH-CONNECT-4). A Garmin upload (BEH-SYNC-7) doesn't count against Strava's cap
+  contract my assumption: Tracks' Last.fm API key is a new cluster secret, so setting it up is his, like the Garmin key (BEH-SYNC-8)
+
 behaviour BEH-MAP-1 "Each workout shows the songs played during it, pinned along its route"
   in FEAT-MAP
   layer ux
@@ -316,6 +335,19 @@ behaviour BEH-MAP-3 "A workout recorded without GPS lists its songs but draws no
   then sees region:SongList
   contract treadmill and indoor workouts have time but no route, so songs are listed by elapsed time
   contract built in tracks#25; live since tracks#26 on 2026-10-27
+
+behaviour BEH-MAP-4 "A Garmin run with GPS gets its map like any other run"
+  in FEAT-MAP
+  layer technical
+  source defined tracks.notes.md#2026-11-25-0747
+  review unreviewed
+  pending
+  priority 2
+  actor runner
+  needs-context "Garmin runs already get a map when their file has GPS. Was the run with no map a treadmill run, a Strava copy, or an upload? If you don't answer by 2026-11-28, I'll take it that setting up the Garmin key (BEH-SYNC-8) answers this, and build nothing here."
+  contract "Can we show the map for Garmin runs?"
+  contract the code already draws it: an uploaded FIT file (BEH-SYNC-7) and the Garmin sync (BEH-SYNC-8) both store the route from the file's GPS, and the page draws any run with two or more fixes, whatever its source. Unreviewed: read from the code on main, not from his runs
+  contract my assumption on why he sees none: the Garmin sync is still off because its key isn't set (BEH-SYNC-8), so a Garmin run reaches Tracks only through Strava or an upload. A Strava copy has no map until its GPS streams are read back (BEH-SYNC-6), and a treadmill run has no GPS at all (BEH-MAP-3)
 
 behaviour BEH-SHARE-1 "A workout can be saved as a share card: the route with the song covers on it"
   in FEAT-SHARE
